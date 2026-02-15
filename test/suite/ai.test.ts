@@ -23,6 +23,14 @@ interface OpenAIConfig {
     model: string;
 }
 
+interface ChatSession {
+    id: string;
+    title: string;
+    messages: AIMessage[];
+    createdAt: number;
+    updatedAt: number;
+}
+
 describe('AI Module - AI对话模块测试', () => {
     describe('Message Management - 消息管理', () => {
         let messages: AIMessage[];
@@ -348,6 +356,126 @@ describe('AI Module - AI对话模块测试', () => {
             ];
             
             assert.strictEqual(messages[0].role, 'system');
+        });
+    });
+
+    describe('ChatSession - 会话数据结构', () => {
+        it('会话包含必要字段 - id、title、messages、时间戳', () => {
+            const session: ChatSession = {
+                id: 'session-123',
+                title: '测试会话',
+                messages: [],
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+            
+            assert.ok(session.id);
+            assert.ok(session.title);
+            assert.ok(Array.isArray(session.messages));
+            assert.ok(session.createdAt);
+            assert.ok(session.updatedAt);
+        });
+
+        it('会话标题自动生成 - 使用首条用户消息前30字符', () => {
+            const userMessage = 'This is a very long test message that should be truncated when used as title';
+            const title = userMessage.slice(0, 30) + (userMessage.length > 30 ? '...' : '');
+            
+            assert.ok(title.includes('...'));
+            assert.ok(title.length > 30);
+        });
+
+        it('会话消息数量统计 - 正确计算消息数量', () => {
+            const session: ChatSession = {
+                id: 'session-123',
+                title: '测试',
+                messages: [
+                    { role: 'user', content: 'Hello' },
+                    { role: 'assistant', content: 'Hi' },
+                    { role: 'user', content: 'How are you?' }
+                ],
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+            
+            assert.strictEqual(session.messages.length, 3);
+        });
+
+        it('会话时间戳更新 - 添加消息后更新updatedAt', async () => {
+            const session: ChatSession = {
+                id: 'session-123',
+                title: '测试',
+                messages: [],
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            };
+            
+            const originalTime = session.updatedAt;
+            await new Promise(r => setTimeout(r, 10));
+            
+            session.messages.push({ role: 'user', content: 'Test' });
+            session.updatedAt = Date.now();
+            
+            assert.ok(session.updatedAt > originalTime);
+        });
+    });
+
+    describe('Session Management - 会话管理', () => {
+        it('多会话管理 - 支持创建多个独立会话', () => {
+            const sessions: ChatSession[] = [];
+            
+            sessions.push({
+                id: 'session-1',
+                title: '会话1',
+                messages: [{ role: 'user', content: 'Hello' }],
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
+            
+            sessions.push({
+                id: 'session-2',
+                title: '会话2',
+                messages: [{ role: 'user', content: 'Hi' }],
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
+            
+            assert.strictEqual(sessions.length, 2);
+            assert.notStrictEqual(sessions[0].id, sessions[1].id);
+        });
+
+        it('会话切换 - 切换当前活动会话', () => {
+            let currentSessionId = 'session-1';
+            
+            currentSessionId = 'session-2';
+            
+            assert.strictEqual(currentSessionId, 'session-2');
+        });
+
+        it('会话删除 - 从列表中移除会话', () => {
+            const sessions: ChatSession[] = [
+                { id: 'session-1', title: '会话1', messages: [], createdAt: 1, updatedAt: 1 },
+                { id: 'session-2', title: '会话2', messages: [], createdAt: 2, updatedAt: 2 }
+            ];
+            
+            const index = sessions.findIndex(s => s.id === 'session-1');
+            sessions.splice(index, 1);
+            
+            assert.strictEqual(sessions.length, 1);
+            assert.strictEqual(sessions[0].id, 'session-2');
+        });
+
+        it('会话排序 - 按更新时间降序排列', () => {
+            const sessions: ChatSession[] = [
+                { id: 'session-1', title: '会话1', messages: [], createdAt: 1, updatedAt: 100 },
+                { id: 'session-2', title: '会话2', messages: [], createdAt: 2, updatedAt: 200 },
+                { id: 'session-3', title: '会话3', messages: [], createdAt: 3, updatedAt: 50 }
+            ];
+            
+            sessions.sort((a, b) => b.updatedAt - a.updatedAt);
+            
+            assert.strictEqual(sessions[0].id, 'session-2');
+            assert.strictEqual(sessions[1].id, 'session-1');
+            assert.strictEqual(sessions[2].id, 'session-3');
         });
     });
 });

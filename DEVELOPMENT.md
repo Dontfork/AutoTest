@@ -233,6 +233,75 @@ npm run test:unit
    - 代码修改完成后，仅执行 `git add` 和 `git commit`
    - 只有用户明确要求时才可执行 `git push`
 
+7. **禁止删除或覆盖关键配置文件**
+   - 以下文件是项目关键配置，禁止删除或覆盖：
+     - `.vscode/launch.json` - VSCode 调试配置
+     - `.vscode/tasks.json` - VSCode 任务配置
+     - `tsconfig.json` - TypeScript 编译配置
+     - `package.json` - 项目依赖和脚本配置
+     - `webpack.config.js` - 打包配置
+   - 执行 `git add` 前必须检查暂存区，确保不会误删关键文件
+   - 使用 `git status` 确认变更内容后再提交
+
+## Git 操作规范
+
+### 提交前检查流程
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Git 提交检查流程                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. git status          检查变更文件列表                         │
+│     ↓                                                            │
+│  2. 确认变更            确保没有误删关键文件                      │
+│     ↓                                                            │
+│  3. git add <files>     只添加需要的文件                         │
+│     ↓                                                            │
+│  4. git status          再次确认暂存区内容                       │
+│     ↓                                                            │
+│  5. git commit          提交变更                                 │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 提交信息规范
+
+提交信息格式：
+```
+<type>-<description>
+```
+
+类型说明：
+| 类型 | 说明 |
+|------|------|
+| `feat` | 新功能 |
+| `fix` | 修复问题 |
+| `add` | 添加内容 |
+| `update` | 更新内容 |
+| `remove` | 移除内容 |
+| `refactor` | 重构代码 |
+| `test` | 测试相关 |
+
+示例：
+- `add-session-management-for-ai-chat`
+- `fix-output-channel-duplication`
+- `update-documentation`
+
+### 历史教训
+
+**事件**: 在 `add-session-management-for-ai-chat` 提交中，误删了 `.vscode/launch.json` 文件
+
+**原因**: 
+- 使用 `git add -A` 时未检查暂存区内容
+- 未确认文件变更列表就执行提交
+
+**教训**:
+1. 执行 `git add` 前必须先用 `git status` 检查
+2. 避免使用 `git add -A`，推荐使用 `git add <具体文件>`
+3. 关键配置文件应加入版本控制保护
+4. 提交前必须确认暂存区内容
+
 ## 打包发布
 
 ### 编译与打包

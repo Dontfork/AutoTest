@@ -1,0 +1,438 @@
+import * as assert from 'assert';
+import { describe, it, beforeEach, afterEach } from 'mocha';
+import * as fs from 'fs';
+import * as path from 'path';
+
+interface AIMessage {
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+}
+
+interface ChatSession {
+    id: string;
+    title: string;
+    messages: AIMessage[];
+    createdAt: number;
+    updatedAt: number;
+}
+
+class MockSessionManager {
+    private sessions: Map<string, ChatSession> = new Map();
+    private currentSessionId: string | null = null;
+    private storagePath: string;
+    private listeners: ((sessions: ChatSession[]) => void)[] = [];
+
+    constructor(storagePath: string) {
+        this.storagePath = storagePath;
+        this.ensureStorageDir();
+        this.loadSessions();
+    }
+
+    private ensureStorageDir(): void {
+        if (!fs.existsSync(this.storagePath)) {
+            fs.mkdirSync(this.storagePath, { recursive: true });
+        }
+    }
+
+    private loadSessions(): void {
+        try {
+            const files = fs.readdirSync(this.storagePath);
+            for (const file of files) {
+                if (file.endsWith('.json')) {
+                    const filePath = path.join(this.storagePath, file);
+                    const content = fs.readFileSync(filePath, 'utf-8');
+                    const session = JSON.parse(content) as ChatSession;
+                    this.sessions.set(session.id, session);
+                }
+            }
+            
+            const sortedSessions = Array.from(this.sessions.values())
+                .sort((a, b) => b.updatedAt - a.updatedAt);
+            
+            if (sortedSessions.length > 0) {
+                this.currentSessionId = sortedSessions[0].id;
+            }
+        } catch {
+            this.sessions.clear();
+        }
+    }
+
+    private saveSession(session: ChatSession): void {
+        const filePath = path.join(this.storagePath, `${session.id}.json`);
+        fs.writeFileSync(filePath, JSON.stringify(session, null, 2), 'utf-8');
+    }
+
+    private deleteSessionFile(sessionId: string): void {
+        const filePath = path.join(this.storagePath, `${sessionId}.json`);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    }
+
+    createSession(): ChatSession {
+        const session: ChatSession = {
+            id: this.generateId(),
+            title: '新对话',
+            messages: [],
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+        
+        this.sessions.set(session.id, session);
+        this.currentSessionId = session.id;
+        this.saveSession(session);
+        this.emitChange();
+        
+        return session;
+    }
+
+    getCurrentSession(): ChatSession | null {
+        if (!this.currentSessionId) {
+            return this.createSession();
+        }
+        return this.sessions.get(this.currentSessionId) || null;
+    }
+
+    setCurrentSession(sessionId: string): ChatSession | null {
+        if (this.sessions.has(sessionId)) {
+            this.currentSessionId = sessionId;
+            return this.sessions.get(sessionId) || null;
+        }
+        return null;
+    }
+
+    getAllSessions(): ChatSession[] {
+        return Array.from(this.sessions.values())
+            .sort((a, b) => b.updatedAt - a.updatedAt);
+    }
+
+    addMessage(sessionId: string, message: AIMessage): ChatSession | null {
+        const session = this.sessions.get(sessionId);
+        if (!session) return null;
+        
+        session.messages.push(message);
+        session.updatedAt = Date.now();
+        
+        if (session.title === '新对话' && message.role === 'user') {
+            session.title = message.content.slice(0, 30) + (message.content.length > 30 ? '...' : '');
+        }
+        
+        this.saveSession(session);
+        this.emitChange();
+        
+        return session;
+    }
+
+    deleteSession(sessionId: string): boolean {
+        if (!this.sessions.has(sessionId)) return false;
+        
+        this.sessions.delete(sessionId);
+        this.deleteSessionFile(sessionId);
+        
+        if (this.currentSessionId === sessionId) {
+            const remaining = this.getAllSessions();
+            this.currentSessionId = remaining.length > 0 ? remaining[0].id : null;
+        }
+        
+        this.emitChange();
+        return true;
+    }
+
+    clearSession(sessionId: string): ChatSession | null {
+        const session = this.sessions.get(sessionId);
+        if (!session) return null;
+        
+        session.messages = [];
+        session.title = '新对话';
+        session.updatedAt = Date.now();
+        
+        this.saveSession(session);
+        this.emitChange();
+        
+        return session;
+    }
+
+    onSessionsChange(listener: (sessions: ChatSession[]) => void): void {
+        this.listeners.push(listener);
+    }
+
+    private generateId(): string {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+    }
+
+    private emitChange(): void {
+        this.listeners.forEach(l => l(this.getAllSessions()));
+    }
+}
+
+describe('SessionManager - 会话管理器测试', () => {
+    let sessionManager: MockSessionManager;
+    let testStoragePath: string;
+
+    beforeEach(() => {
+        testStoragePath = path.join(__dirname, '..', 'test-storage-' + Date.now());
+        sessionManager = new MockSessionManager(testStoragePath);
+    });
+
+    afterEach(() => {
+        if (fs.existsSync(testStoragePath)) {
+            fs.rmSync(testStoragePath, { recursive: true, force: true });
+        }
+    });
+
+    describe('createSession - 创建会话', () => {
+        it('创建新会话 - 返回包含id、title、messages的会话对象', () => {
+            const session = sessionManager.createSession();
+            
+            assert.ok(session.id);
+            assert.strictEqual(session.title, '新对话');
+            assert.deepStrictEqual(session.messages, []);
+            assert.ok(session.createdAt);
+            assert.ok(session.updatedAt);
+        });
+
+        it('创建多个会话 - 每个会话有唯一id', () => {
+            const session1 = sessionManager.createSession();
+            const session2 = sessionManager.createSession();
+            
+            assert.notStrictEqual(session1.id, session2.id);
+        });
+
+        it('创建会话后自动设为当前会话', () => {
+            const session = sessionManager.createSession();
+            const current = sessionManager.getCurrentSession();
+            
+            assert.strictEqual(current?.id, session.id);
+        });
+
+        it('创建会话后可通过getAllSessions获取', () => {
+            const session = sessionManager.createSession();
+            const all = sessionManager.getAllSessions();
+            
+            assert.strictEqual(all.length, 1);
+            assert.strictEqual(all[0].id, session.id);
+        });
+    });
+
+    describe('getCurrentSession - 获取当前会话', () => {
+        it('无会话时自动创建新会话', () => {
+            const session = sessionManager.getCurrentSession();
+            
+            assert.ok(session);
+            assert.strictEqual(session.title, '新对话');
+        });
+
+        it('返回当前激活的会话', () => {
+            const session = sessionManager.createSession();
+            const current = sessionManager.getCurrentSession();
+            
+            assert.strictEqual(current?.id, session.id);
+        });
+    });
+
+    describe('setCurrentSession - 切换会话', () => {
+        it('切换到指定会话', () => {
+            const session1 = sessionManager.createSession();
+            const session2 = sessionManager.createSession();
+            
+            const switched = sessionManager.setCurrentSession(session1.id);
+            
+            assert.strictEqual(switched?.id, session1.id);
+            assert.strictEqual(sessionManager.getCurrentSession()?.id, session1.id);
+        });
+
+        it('切换到不存在的会话返回null', () => {
+            const result = sessionManager.setCurrentSession('non-existent-id');
+            
+            assert.strictEqual(result, null);
+        });
+    });
+
+    describe('getAllSessions - 获取所有会话', () => {
+        it('返回按更新时间降序排列的会话列表', async () => {
+            const session1 = sessionManager.createSession();
+            await new Promise(r => setTimeout(r, 10));
+            const session2 = sessionManager.createSession();
+            
+            const all = sessionManager.getAllSessions();
+            
+            assert.strictEqual(all.length, 2);
+            assert.strictEqual(all[0].id, session2.id);
+            assert.strictEqual(all[1].id, session1.id);
+        });
+
+        it('空会话列表返回空数组', () => {
+            const all = sessionManager.getAllSessions();
+            assert.strictEqual(all.length, 0);
+        });
+    });
+
+    describe('addMessage - 添加消息', () => {
+        it('添加用户消息到会话', () => {
+            const session = sessionManager.createSession();
+            
+            sessionManager.addMessage(session.id, { role: 'user', content: 'Hello' });
+            
+            const current = sessionManager.getCurrentSession();
+            assert.strictEqual(current?.messages.length, 1);
+            assert.strictEqual(current?.messages[0].role, 'user');
+            assert.strictEqual(current?.messages[0].content, 'Hello');
+        });
+
+        it('添加助手消息到会话', () => {
+            const session = sessionManager.createSession();
+            
+            sessionManager.addMessage(session.id, { role: 'assistant', content: 'Hi there!' });
+            
+            const current = sessionManager.getCurrentSession();
+            assert.strictEqual(current?.messages.length, 1);
+            assert.strictEqual(current?.messages[0].role, 'assistant');
+        });
+
+        it('首条用户消息自动更新会话标题', () => {
+            const session = sessionManager.createSession();
+            
+            sessionManager.addMessage(session.id, { role: 'user', content: 'This is a very long message that should be truncated' });
+            
+            const updated = sessionManager.getAllSessions()[0];
+            assert.ok(updated.title.startsWith('This is a very long message'));
+            assert.ok(updated.title.endsWith('...'));
+        });
+
+        it('短消息完整作为标题', () => {
+            const session = sessionManager.createSession();
+            
+            sessionManager.addMessage(session.id, { role: 'user', content: 'Short message' });
+            
+            const updated = sessionManager.getAllSessions()[0];
+            assert.strictEqual(updated.title, 'Short message');
+        });
+
+        it('添加消息后更新updatedAt时间', async () => {
+            const session = sessionManager.createSession();
+            const originalTime = session.updatedAt;
+            
+            await new Promise(r => setTimeout(r, 10));
+            sessionManager.addMessage(session.id, { role: 'user', content: 'Test' });
+            
+            const updated = sessionManager.getCurrentSession();
+            assert.ok(updated!.updatedAt > originalTime);
+        });
+    });
+
+    describe('deleteSession - 删除会话', () => {
+        it('删除指定会话', () => {
+            const session = sessionManager.createSession();
+            
+            const result = sessionManager.deleteSession(session.id);
+            
+            assert.strictEqual(result, true);
+            assert.strictEqual(sessionManager.getAllSessions().length, 0);
+        });
+
+        it('删除不存在的会话返回false', () => {
+            const result = sessionManager.deleteSession('non-existent');
+            
+            assert.strictEqual(result, false);
+        });
+
+        it('删除当前会话后自动切换到其他会话', () => {
+            const session1 = sessionManager.createSession();
+            const session2 = sessionManager.createSession();
+            
+            sessionManager.deleteSession(session2.id);
+            
+            const current = sessionManager.getCurrentSession();
+            assert.strictEqual(current?.id, session1.id);
+        });
+
+        it('删除最后一个会话后当前会话为null', () => {
+            const session = sessionManager.createSession();
+            
+            sessionManager.deleteSession(session.id);
+            
+            const all = sessionManager.getAllSessions();
+            assert.strictEqual(all.length, 0);
+        });
+    });
+
+    describe('clearSession - 清空会话', () => {
+        it('清空会话消息', () => {
+            const session = sessionManager.createSession();
+            sessionManager.addMessage(session.id, { role: 'user', content: 'Test' });
+            sessionManager.addMessage(session.id, { role: 'assistant', content: 'Response' });
+            
+            sessionManager.clearSession(session.id);
+            
+            const cleared = sessionManager.getCurrentSession();
+            assert.strictEqual(cleared?.messages.length, 0);
+            assert.strictEqual(cleared?.title, '新对话');
+        });
+
+        it('清空不存在的会话返回null', () => {
+            const result = sessionManager.clearSession('non-existent');
+            
+            assert.strictEqual(result, null);
+        });
+    });
+
+    describe('Persistence - 持久化', () => {
+        it('会话自动保存到文件', () => {
+            const session = sessionManager.createSession();
+            sessionManager.addMessage(session.id, { role: 'user', content: 'Test' });
+            
+            const sessionFile = path.join(testStoragePath, `${session.id}.json`);
+            
+            assert.ok(fs.existsSync(sessionFile));
+            
+            const saved = JSON.parse(fs.readFileSync(sessionFile, 'utf-8'));
+            assert.strictEqual(saved.id, session.id);
+            assert.strictEqual(saved.messages.length, 1);
+        });
+
+        it('重新加载时恢复会话', () => {
+            const session = sessionManager.createSession();
+            sessionManager.addMessage(session.id, { role: 'user', content: 'Test message' });
+            
+            const newManager = new MockSessionManager(testStoragePath);
+            const sessions = newManager.getAllSessions();
+            
+            assert.strictEqual(sessions.length, 1);
+            assert.strictEqual(sessions[0].messages.length, 1);
+            assert.strictEqual(sessions[0].messages[0].content, 'Test message');
+        });
+
+        it('删除会话时删除对应文件', () => {
+            const session = sessionManager.createSession();
+            const sessionFile = path.join(testStoragePath, `${session.id}.json`);
+            
+            assert.ok(fs.existsSync(sessionFile));
+            
+            sessionManager.deleteSession(session.id);
+            
+            assert.ok(!fs.existsSync(sessionFile));
+        });
+    });
+
+    describe('Events - 事件', () => {
+        it('会话变更时触发事件', (done) => {
+            sessionManager.onSessionsChange((sessions) => {
+                assert.strictEqual(sessions.length, 1);
+                done();
+            });
+            
+            sessionManager.createSession();
+        });
+
+        it('删除会话时触发事件', (done) => {
+            const session = sessionManager.createSession();
+            
+            sessionManager.onSessionsChange((sessions) => {
+                assert.strictEqual(sessions.length, 0);
+                done();
+            });
+            
+            sessionManager.deleteSession(session.id);
+        });
+    });
+});
