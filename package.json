@@ -54,11 +54,11 @@
       },
       {
         "command": "autotest.downloadLog",
-        "title": "AutoTest: 下载日志文件"
+        "title": "下载日志文件"
       },
       {
         "command": "autotest.openLog",
-        "title": "AutoTest: 打开日志文件"
+        "title": "打开日志文件"
       },
       {
         "command": "autotest.reloadConfig",

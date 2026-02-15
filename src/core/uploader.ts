@@ -8,12 +8,14 @@ import { executeRemoteCommand, filterCommandOutput } from './sshClient';
 
 export class FileUploader {
     private commandExecutor: CommandExecutor;
-    private outputChannel: vscode.OutputChannel;
+    private pluginChannel: vscode.OutputChannel;
+    private testOutputChannel: vscode.OutputChannel;
     private onTestCaseComplete: (() => void) | null = null;
 
     constructor(commandExecutor: CommandExecutor) {
         this.commandExecutor = commandExecutor;
-        this.outputChannel = vscode.window.createOutputChannel('AutoTest');
+        this.pluginChannel = vscode.window.createOutputChannel('AutoTest');
+        this.testOutputChannel = vscode.window.createOutputChannel('TestOutput');
     }
 
     setOnTestCaseComplete(callback: () => void): void {
@@ -88,14 +90,14 @@ export class FileUploader {
                 }
             });
 
-            this.outputChannel.show();
+            this.testOutputChannel.show();
             
             if (this.onTestCaseComplete) {
                 this.onTestCaseComplete();
             }
         } catch (error: any) {
-            this.outputChannel.appendLine(`[错误] ${error.message}`);
-            this.outputChannel.show();
+            this.pluginChannel.appendLine(`[错误] ${error.message}`);
+            this.pluginChannel.show();
             vscode.window.showErrorMessage(`操作失败: ${error.message}`);
             throw error;
         }
@@ -103,12 +105,12 @@ export class FileUploader {
 
     private async runSingleTestCase(localFilePath: string, config: ReturnType<typeof getConfig>): Promise<void> {
         const remoteFilePath = this.calculateRemotePath(localFilePath);
-        this.outputChannel.appendLine(`[路径映射] ${localFilePath} -> ${remoteFilePath}`);
+        this.pluginChannel.appendLine(`[路径映射] ${localFilePath} -> ${remoteFilePath}`);
 
         const scpClient = new SCPClient();
         try {
             await scpClient.uploadFile(localFilePath, remoteFilePath);
-            this.outputChannel.appendLine(`[上传成功] ${localFilePath} -> ${remoteFilePath}`);
+            this.pluginChannel.appendLine(`[上传成功] ${localFilePath} -> ${remoteFilePath}`);
         } finally {
             await scpClient.disconnect();
         }
@@ -121,12 +123,12 @@ export class FileUploader {
         
         const command = replaceCommandVariables(config.command.executeCommand, variables);
         
-        this.outputChannel.appendLine(`[变量替换] 原始命令: ${config.command.executeCommand}`);
-        this.outputChannel.appendLine(`[变量替换] 替换后: ${command}`);
+        this.testOutputChannel.appendLine(`[命令] ${command}`);
+        this.testOutputChannel.appendLine('─'.repeat(50));
         
         const result = await executeRemoteCommand(
             command, 
-            this.outputChannel,
+            this.testOutputChannel,
             {
                 patterns: config.command.filterPatterns || [],
                 mode: config.command.filterMode || 'include'
@@ -134,7 +136,7 @@ export class FileUploader {
         );
         
         if (result.code !== 0) {
-            this.outputChannel.appendLine(`[警告] 命令退出码: ${result.code}`);
+            this.testOutputChannel.appendLine(`[警告] 命令退出码: ${result.code}`);
         }
     }
 
@@ -169,7 +171,7 @@ export class FileUploader {
                             
                             const remotePath = this.calculateRemotePath(file);
                             await scpClient.uploadFile(file, remotePath);
-                            this.outputChannel.appendLine(`[上传成功] ${file} -> ${remotePath}`);
+                            this.pluginChannel.appendLine(`[上传成功] ${file} -> ${remotePath}`);
                         }
                     } finally {
                         await scpClient.disconnect();
@@ -183,7 +185,7 @@ export class FileUploader {
                     const scpClient = new SCPClient();
                     try {
                         await scpClient.uploadFile(localPath, remotePath);
-                        this.outputChannel.appendLine(`[上传成功] ${localPath} -> ${remotePath}`);
+                        this.pluginChannel.appendLine(`[上传成功] ${localPath} -> ${remotePath}`);
                     } finally {
                         await scpClient.disconnect();
                     }
@@ -192,10 +194,10 @@ export class FileUploader {
                 }
             });
 
-            this.outputChannel.show();
+            this.pluginChannel.show();
         } catch (error: any) {
-            this.outputChannel.appendLine(`[上传失败] ${error.message}`);
-            this.outputChannel.show();
+            this.pluginChannel.appendLine(`[上传失败] ${error.message}`);
+            this.pluginChannel.show();
             vscode.window.showErrorMessage(`上传失败: ${error.message}`);
             throw error;
         }
@@ -212,13 +214,13 @@ export class FileUploader {
             const scpClient = new SCPClient();
             try {
                 await scpClient.uploadFile(filePath, finalRemotePath);
-                this.outputChannel.appendLine(`[上传成功] ${filePath} -> ${finalRemotePath}`);
+                this.pluginChannel.appendLine(`[上传成功] ${filePath} -> ${finalRemotePath}`);
                 return finalRemotePath;
             } finally {
                 await scpClient.disconnect();
             }
         } catch (error: any) {
-            this.outputChannel.appendLine(`[上传失败] ${error.message}`);
+            this.pluginChannel.appendLine(`[上传失败] ${error.message}`);
             throw error;
         }
     }
@@ -236,7 +238,7 @@ export class FileUploader {
             for (const file of files) {
                 const remotePath = this.calculateRemotePath(file);
                 await scpClient.uploadFile(file, remotePath);
-                this.outputChannel.appendLine(`[上传成功] ${file} -> ${remotePath}`);
+                this.pluginChannel.appendLine(`[上传成功] ${file} -> ${remotePath}`);
                 uploadedFiles.push(remotePath);
             }
         } finally {
@@ -266,6 +268,6 @@ export class FileUploader {
     }
 
     showOutput(): void {
-        this.outputChannel.show();
+        this.pluginChannel.show();
     }
 }
