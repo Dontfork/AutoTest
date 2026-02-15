@@ -200,16 +200,13 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             if (!text) return '<p></p>';
             let html = escapeHtml(text);
             
-            var codeBlockRe = new RegExp('\`\`\`(\\w*)\\n([\\s\\S]*?)\`\`\`', 'g');
-            html = html.replace(codeBlockRe, function(m, lang, code) {
+            html = html.replace(/\`\`\`(\w*)\n([\s\S]*?)\`\`\`/g, function(m, lang, code) {
                 return '<pre><code class="language-' + lang + '">' + code.trim() + '</code></pre>';
             });
             
-            var inlineCodeRe = new RegExp('\`([^\`]+)\`', 'g');
-            html = html.replace(inlineCodeRe, '<code>$1</code>');
+            html = html.replace(/\`([^\`]+)\`/g, '<code>$1</code>');
             
-            var boldRe = new RegExp('\\*\\*([^\\*]+)\\*\\*', 'g');
-            html = html.replace(boldRe, '<strong>$1</strong>');
+            html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
             
             html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
             html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
@@ -218,14 +215,11 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             html = html.replace(/^[-] (.+)$/gm, '<li>$1</li>');
             html = html.replace(/^[*] (.+)$/gm, '<li>$1</li>');
             
-            var listRe = new RegExp('(<li>.*</li>\\n?)+', 'g');
-            html = html.replace(listRe, '<ul>$&</ul>');
+            html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
             
-            var italicRe = new RegExp('\\*([^\\*\\n]+?)\\*', 'g');
-            html = html.replace(italicRe, '<em>$1</em>');
+            html = html.replace(/\*([^\*\n]+?)\*/g, '<em>$1</em>');
             
-            var linkRe = new RegExp('\\[([^\\]]+)\\]\\(([^)]+)\\)', 'g');
-            html = html.replace(linkRe, '<a href="$2">$1</a>');
+            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
             
             html = html.replace(/\n\n/g, '</p><p>');
             html = '<p>' + html + '</p>';
