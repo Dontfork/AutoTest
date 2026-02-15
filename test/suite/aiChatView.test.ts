@@ -196,4 +196,15 @@ describe('AIChatView Session Management - 会话管理测试', () => {
         const source = getSourceFile();
         assert.ok(source.includes('private sendCurrentSession'));
     });
+
+    it('新建会话应检查当前会话是否为空', () => {
+        const source = getSourceFile();
+        assert.ok(source.includes('currentSession.messages.length'));
+    });
+
+    it('新建会话逻辑应只在当前会话有内容时创建新会话', () => {
+        const source = getSourceFile();
+        assert.ok(source.includes("if (!currentSession || currentSession.messages.length > 0)"));
+        assert.ok(source.includes('this.aiChat.createNewSession()'));
+    });
 });

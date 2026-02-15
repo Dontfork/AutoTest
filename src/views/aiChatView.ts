@@ -148,10 +148,10 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         .messages { flex: 1; overflow-y: auto; padding: 16px; }
         .msg { margin-bottom: 16px; display: flex; }
         .msg.user { justify-content: flex-end; }
-        .bubble { padding: 12px 16px; border-radius: 12px; max-width: 85%; line-height: 1.6; }
-        .user .bubble { background: #0e639c; color: white; border-bottom-right-radius: 4px; }
-        .assistant .bubble { background: #2d2d2d; border: 1px solid #3c3c3c; border-bottom-left-radius: 4px; }
-        .error .bubble { background: #3c1f1f; border: 1px solid #5a1d1d; color: #f48771; }
+        .bubble { padding: 10px 14px; border-radius: 4px; max-width: 85%; line-height: 1.6; }
+        .user .bubble { background: transparent; border: 1px solid #3c3c3c; }
+        .assistant .bubble { background: transparent; border: 1px solid #3c3c3c; }
+        .error .bubble { background: transparent; border: 1px solid #5a1d1d; color: #f48771; }
         .bubble pre { background: #1e1e1e; padding: 12px 16px; border-radius: 8px; overflow-x: auto; margin: 10px 0; }
         .bubble code { background: #1e1e1e; padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9em; }
         .bubble pre code { background: none; padding: 0; }
@@ -165,27 +165,27 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         .bubble a { color: #3794ff; }
         .bubble strong { color: #ffffff; }
         .bubble em { color: #d0d0d0; }
-        .input-area { padding: 12px 16px; border-top: 1px solid #3c3c3c; background: #252526; }
-        .input-wrap { display: flex; gap: 8px; align-items: flex-end; }
-        textarea { flex: 1; padding: 10px 14px; background: #3c3c3c; color: #cccccc; border: 1px solid #3c3c3c; border-radius: 8px; resize: none; font-family: inherit; font-size: 14px; line-height: 1.5; }
-        textarea:focus { outline: none; border-color: #0e639c; }
-        button#sendBtn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #0e639c; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-        button#sendBtn:hover { background: #1177bb; }
-        button#sendBtn:disabled { background: #3c3c3c; cursor: not-allowed; }
-        button#sendBtn svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; }
+        .input-area { padding: 12px 16px; border-top: 1px solid #3c3c3c; background: transparent; }
+        .input-wrap { display: flex; gap: 8px; align-items: center; }
+        textarea { flex: 1; padding: 10px 12px; background: transparent; color: #cccccc; border: 1px solid #3c3c3c; border-radius: 4px; resize: none; font-family: inherit; font-size: 14px; line-height: 1.5; }
+        textarea:focus { outline: none; border-color: #858585; }
+        button#sendBtn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: transparent; color: #858585; border: 1px solid #3c3c3c; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
+        button#sendBtn:hover { color: #cccccc; border-color: #858585; }
+        button#sendBtn:disabled { color: #3c3c3c; border-color: #3c3c3c; cursor: not-allowed; }
+        button#sendBtn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.5; fill: none; }
         .welcome { text-align: center; padding: 60px 20px; color: #858585; }
-        .welcome-icon { width: 64px; height: 64px; margin: 0 auto 20px; stroke: #0e639c; stroke-width: 1; fill: none; }
-        .welcome h2 { color: #cccccc; margin-bottom: 8px; font-weight: 500; }
-        .history-panel { display: none; position: absolute; top: 100%; left: 12px; right: 12px; background: #252526; border: 1px solid #3c3c3c; border-radius: 8px; max-height: 300px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .welcome-icon { width: 48px; height: 48px; margin: 0 auto 16px; stroke: #858585; stroke-width: 1; fill: none; }
+        .welcome h2 { color: #cccccc; margin-bottom: 8px; font-weight: 400; }
+        .history-panel { display: none; position: absolute; top: 100%; left: 12px; right: 12px; background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 4px; max-height: 300px; overflow-y: auto; z-index: 100; }
         .history-panel.show { display: block; }
-        .history-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #3c3c3c; display: flex; justify-content: space-between; align-items: center; }
+        .history-item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #3c3c3c; display: flex; justify-content: space-between; align-items: center; }
         .history-item:last-child { border-bottom: none; }
         .history-item:hover { background: #2d2d2d; }
-        .history-item.active { background: #094771; }
+        .history-item.active { background: #2d2d2d; }
         .history-item .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .history-item .meta { font-size: 0.8em; color: #858585; margin-left: 8px; }
-        .history-item .delete-btn { background: none; border: none; color: #858585; cursor: pointer; padding: 4px 8px; margin-left: 8px; border-radius: 4px; display: flex; align-items: center; }
-        .history-item .delete-btn:hover { color: #f48771; background: #3c1f1f; }
+        .history-item .delete-btn { background: none; border: none; color: #858585; cursor: pointer; padding: 4px; margin-left: 8px; display: flex; align-items: center; }
+        .history-item .delete-btn:hover { color: #f48771; }
         .history-item .delete-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.5; fill: none; }
         .no-history { padding: 24px; text-align: center; color: #858585; }
     </style>
@@ -204,7 +204,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     </div>
     <div id="messages" class="messages">
         <div class="welcome">
-            <svg class="welcome-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            <svg class="welcome-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></svg>
             <h2>AutoTest AI 助手</h2>
             <p>输入问题开始对话</p>
         </div>

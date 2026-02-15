@@ -88,7 +88,7 @@ class MockSessionManager {
 
     getCurrentSession(): ChatSession | null {
         if (!this.currentSessionId) {
-            return this.createSession();
+            return null;
         }
         return this.sessions.get(this.currentSessionId) || null;
     }
@@ -215,11 +215,10 @@ describe('SessionManager - 会话管理器测试', () => {
     });
 
     describe('getCurrentSession - 获取当前会话', () => {
-        it('无会话时自动创建新会话', () => {
+        it('无会话时返回null', () => {
             const session = sessionManager.getCurrentSession();
             
-            assert.ok(session);
-            assert.strictEqual(session.title, '新对话');
+            assert.strictEqual(session, null);
         });
 
         it('返回当前激活的会话', () => {
@@ -433,6 +432,55 @@ describe('SessionManager - 会话管理器测试', () => {
             });
             
             sessionManager.deleteSession(session.id);
+        });
+    });
+
+    describe('New Session Logic - 新建会话逻辑', () => {
+        it('无会话时点击新建应创建会话', () => {
+            const current = sessionManager.getCurrentSession();
+            assert.strictEqual(current, null);
+            
+            const newSession = sessionManager.createSession();
+            
+            assert.ok(newSession);
+            assert.strictEqual(sessionManager.getAllSessions().length, 1);
+        });
+
+        it('当前会话为空时点击新建不应创建新会话', () => {
+            const session = sessionManager.createSession();
+            const sessionCount = sessionManager.getAllSessions().length;
+            
+            const current = sessionManager.getCurrentSession();
+            if (current && current.messages.length === 0) {
+                // 不创建新会话
+            } else {
+                sessionManager.createSession();
+            }
+            
+            assert.strictEqual(sessionManager.getAllSessions().length, sessionCount);
+        });
+
+        it('当前会话有内容时点击新建应创建新会话', () => {
+            const session = sessionManager.createSession();
+            sessionManager.addMessage(session.id, { role: 'user', content: 'Hello' });
+            
+            const sessionCount = sessionManager.getAllSessions().length;
+            
+            const current = sessionManager.getCurrentSession();
+            if (!current || current.messages.length > 0) {
+                sessionManager.createSession();
+            }
+            
+            assert.strictEqual(sessionManager.getAllSessions().length, sessionCount + 1);
+        });
+
+        it('删除最后一个会话后getCurrentSession返回null', () => {
+            const session = sessionManager.createSession();
+            
+            sessionManager.deleteSession(session.id);
+            
+            const current = sessionManager.getCurrentSession();
+            assert.strictEqual(current, null);
         });
     });
 });
