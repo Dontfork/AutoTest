@@ -138,58 +138,70 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1e1e1e; color: #cccccc; height: 100vh; display: flex; flex-direction: column; }
-        .toolbar { padding: 8px; border-bottom: 1px solid #3c3c3c; display: flex; gap: 8px; position: relative; }
-        .toolbar button { flex: 1; padding: 8px 12px; background: #0e639c; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        .toolbar button:hover { background: #1177bb; }
-        .messages { flex: 1; overflow-y: auto; padding: 12px; }
-        .msg { margin-bottom: 12px; }
-        .bubble { padding: 10px 14px; border-radius: 8px; max-width: 90%; line-height: 1.5; }
-        .user .bubble { background: #0e639c; color: white; margin-left: auto; }
-        .assistant .bubble { background: #2d2d2d; border: 1px solid #3c3c3c; }
-        .error .bubble { background: #5a1d1d; border: 1px solid #be1100; color: #ff6b6b; }
-        .bubble pre { background: #1e1e1e; padding: 8px 12px; border-radius: 4px; overflow-x: auto; margin: 8px 0; }
-        .bubble code { background: #1e1e1e; padding: 2px 6px; border-radius: 3px; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9em; }
+        .toolbar { padding: 8px 12px; border-bottom: 1px solid #3c3c3c; display: flex; gap: 8px; align-items: center; position: relative; }
+        .toolbar button { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 12px; background: transparent; color: #cccccc; border: 1px solid #3c3c3c; border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .toolbar button:hover { background: #2d2d2d; border-color: #0e639c; color: #ffffff; }
+        .toolbar button svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.5; fill: none; }
+        .messages { flex: 1; overflow-y: auto; padding: 16px; }
+        .msg { margin-bottom: 16px; display: flex; }
+        .msg.user { justify-content: flex-end; }
+        .bubble { padding: 12px 16px; border-radius: 12px; max-width: 85%; line-height: 1.6; }
+        .user .bubble { background: #0e639c; color: white; border-bottom-right-radius: 4px; }
+        .assistant .bubble { background: #2d2d2d; border: 1px solid #3c3c3c; border-bottom-left-radius: 4px; }
+        .error .bubble { background: #3c1f1f; border: 1px solid #5a1d1d; color: #f48771; }
+        .bubble pre { background: #1e1e1e; padding: 12px 16px; border-radius: 8px; overflow-x: auto; margin: 10px 0; }
+        .bubble code { background: #1e1e1e; padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9em; }
         .bubble pre code { background: none; padding: 0; }
-        .bubble h1, .bubble h2, .bubble h3 { margin: 12px 0 8px 0; color: #e0e0e0; }
-        .bubble h1 { font-size: 1.4em; }
-        .bubble h2 { font-size: 1.2em; }
-        .bubble h3 { font-size: 1.1em; }
-        .bubble ul, .bubble ol { margin: 8px 0; padding-left: 20px; }
+        .bubble h1, .bubble h2, .bubble h3 { margin: 14px 0 10px 0; color: #e0e0e0; }
+        .bubble h1 { font-size: 1.3em; }
+        .bubble h2 { font-size: 1.15em; }
+        .bubble h3 { font-size: 1em; }
+        .bubble ul, .bubble ol { margin: 10px 0; padding-left: 20px; }
         .bubble li { margin: 4px 0; }
-        .bubble blockquote { border-left: 3px solid #0e639c; padding-left: 12px; margin: 8px 0; color: #a0a0a0; }
+        .bubble blockquote { border-left: 3px solid #0e639c; padding-left: 12px; margin: 10px 0; color: #a0a0a0; }
         .bubble a { color: #3794ff; }
         .bubble strong { color: #ffffff; }
         .bubble em { color: #d0d0d0; }
-        .input-area { padding: 12px; border-top: 1px solid #3c3c3c; }
-        .input-wrap { display: flex; gap: 8px; }
-        textarea { flex: 1; padding: 10px; background: #3c3c3c; color: #cccccc; border: 1px solid #3c3c3c; border-radius: 4px; resize: none; font-family: inherit; }
+        .input-area { padding: 12px 16px; border-top: 1px solid #3c3c3c; background: #252526; }
+        .input-wrap { display: flex; gap: 8px; align-items: flex-end; }
+        textarea { flex: 1; padding: 10px 14px; background: #3c3c3c; color: #cccccc; border: 1px solid #3c3c3c; border-radius: 8px; resize: none; font-family: inherit; font-size: 14px; line-height: 1.5; }
         textarea:focus { outline: none; border-color: #0e639c; }
-        button#sendBtn { padding: 10px 20px; background: #0e639c; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button#sendBtn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #0e639c; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
         button#sendBtn:hover { background: #1177bb; }
         button#sendBtn:disabled { background: #3c3c3c; cursor: not-allowed; }
-        .welcome { text-align: center; padding: 40px 20px; color: #858585; }
-        .welcome h2 { color: #cccccc; margin-bottom: 8px; }
-        .history-panel { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #252526; border: 1px solid #3c3c3c; border-radius: 4px; max-height: 300px; overflow-y: auto; z-index: 100; }
+        button#sendBtn svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; }
+        .welcome { text-align: center; padding: 60px 20px; color: #858585; }
+        .welcome-icon { width: 64px; height: 64px; margin: 0 auto 20px; stroke: #0e639c; stroke-width: 1; fill: none; }
+        .welcome h2 { color: #cccccc; margin-bottom: 8px; font-weight: 500; }
+        .history-panel { display: none; position: absolute; top: 100%; left: 12px; right: 12px; background: #252526; border: 1px solid #3c3c3c; border-radius: 8px; max-height: 300px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .history-panel.show { display: block; }
-        .history-item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #3c3c3c; display: flex; justify-content: space-between; align-items: center; }
+        .history-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #3c3c3c; display: flex; justify-content: space-between; align-items: center; }
         .history-item:last-child { border-bottom: none; }
         .history-item:hover { background: #2d2d2d; }
         .history-item.active { background: #094771; }
         .history-item .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .history-item .meta { font-size: 0.8em; color: #858585; margin-left: 8px; }
-        .history-item .delete-btn { background: none; border: none; color: #858585; cursor: pointer; padding: 2px 6px; margin-left: 8px; }
-        .history-item .delete-btn:hover { color: #f48771; }
-        .no-history { padding: 20px; text-align: center; color: #858585; }
+        .history-item .delete-btn { background: none; border: none; color: #858585; cursor: pointer; padding: 4px 8px; margin-left: 8px; border-radius: 4px; display: flex; align-items: center; }
+        .history-item .delete-btn:hover { color: #f48771; background: #3c1f1f; }
+        .history-item .delete-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.5; fill: none; }
+        .no-history { padding: 24px; text-align: center; color: #858585; }
     </style>
 </head>
 <body>
     <div class="toolbar">
-        <button id="newBtn">+ 新对话</button>
-        <button id="historyBtn">历史</button>
+        <button id="newBtn">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            新对话
+        </button>
+        <button id="historyBtn">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            历史
+        </button>
         <div id="historyPanel" class="history-panel"></div>
     </div>
     <div id="messages" class="messages">
         <div class="welcome">
+            <svg class="welcome-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
             <h2>AutoTest AI 助手</h2>
             <p>输入问题开始对话</p>
         </div>
@@ -197,7 +209,9 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     <div class="input-area">
         <div class="input-wrap">
             <textarea id="input" placeholder="输入消息..." rows="2"></textarea>
-            <button id="sendBtn">发送</button>
+            <button id="sendBtn" title="发送">
+                <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </button>
         </div>
     </div>
     <script>
@@ -246,7 +260,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 '<div class="history-item' + (s.id === currentSessionId ? ' active' : '') + '" data-id="' + s.id + '">' +
                 '<span class="title">' + escapeHtml(s.title) + '</span>' +
                 '<span class="meta">' + s.messageCount + '条</span>' +
-                '<button class="delete-btn" data-id="' + s.id + '">删除</button>' +
+                '<button class="delete-btn" data-id="' + s.id + '" title="删除"><svg viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>' +
                 '</div>'
             ).join('');
         }
