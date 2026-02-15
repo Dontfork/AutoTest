@@ -96,11 +96,12 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         try {
             let fullContent = '';
             
-            const response = await this.aiChat.sendMessageStream(userMessage, (chunk) => {
+            const response = await this.aiChat.sendMessageStream(userMessage, async (chunk) => {
                 fullContent += chunk;
+                const htmlContent = await marked(fullContent);
                 this.view?.webview.postMessage({
                     command: 'streamChunk',
-                    data: chunk
+                    data: htmlContent
                 });
             });
 
@@ -193,7 +194,6 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         const input = document.getElementById('input');
         const sendBtn = document.getElementById('sendBtn');
         const newBtn = document.getElementById('newBtn');
-        let rawContent = '';
         
         function escapeHtml(text) {
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -216,7 +216,6 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             addMessage('user', escapeHtml(text));
             input.value = '';
             sendBtn.disabled = true;
-            rawContent = '';
             addMessage('assistant', '思考中...');
             vscode.postMessage({ command: 'sendMessage', data: text });
         }
@@ -231,7 +230,6 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         
         newBtn.onclick = function() {
             messages.innerHTML = '<div class="welcome"><h2>AutoTest AI 助手</h2><p>输入问题开始对话</p></div>';
-            rawContent = '';
             vscode.postMessage({ command: 'newSession' });
         };
         
@@ -241,13 +239,8 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 const lastMsg = messages.lastChild;
                 if (lastMsg && lastMsg.classList.contains('assistant')) {
                     const bubble = lastMsg.querySelector('.bubble');
-                    if (bubble) {
-                        if (bubble.textContent === '思考中...') {
-                            bubble.textContent = '';
-                            rawContent = '';
-                        }
-                        rawContent += m.data;
-                        bubble.textContent = rawContent;
+                    if (bubble && m.data) {
+                        bubble.innerHTML = m.data;
                         messages.scrollTop = messages.scrollHeight;
                     }
                 }

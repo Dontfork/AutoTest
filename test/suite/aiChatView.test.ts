@@ -79,14 +79,15 @@ describe('AIChatView WebView Template - WebView模板测试', () => {
         assert.ok(template.includes('function escapeHtml'));
     });
 
-    it('应使用rawContent变量存储原始内容', () => {
+    it('streamChunk应直接使用innerHTML显示渲染后的内容', () => {
         const template = getTemplate();
-        assert.ok(template.includes('let rawContent'));
+        assert.ok(template.includes("if (m.command === 'streamChunk')"));
+        assert.ok(template.includes('bubble.innerHTML = m.data'));
     });
 
-    it('流式输出完成时应使用innerHTML显示渲染后的内容', () => {
+    it('streamComplete应使用innerHTML显示渲染后的内容', () => {
         const template = getTemplate();
-        assert.ok(template.includes('bubble.innerHTML = m.data'));
+        assert.ok(template.includes("if (m.command === 'streamComplete')"));
     });
 });
 
@@ -101,9 +102,20 @@ describe('AIChatView Markdown Rendering - Markdown渲染测试', () => {
         assert.ok(source.includes('await marked('));
     });
 
+    it('streamChunk应发送渲染后的HTML实现动态渲染', () => {
+        const source = getSourceFile();
+        assert.ok(source.includes("command: 'streamChunk'"));
+        assert.ok(source.includes('const htmlContent = await marked(fullContent)'));
+    });
+
     it('streamComplete应发送渲染后的HTML', () => {
         const source = getSourceFile();
         assert.ok(source.includes("command: 'streamComplete'"));
         assert.ok(source.includes('htmlContent'));
+    });
+
+    it('回调函数应为async以支持动态渲染', () => {
+        const source = getSourceFile();
+        assert.ok(source.includes('async (chunk)'));
     });
 });
