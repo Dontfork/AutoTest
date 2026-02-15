@@ -116,9 +116,10 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 this.sendSessions();
             }
         } catch (error: any) {
+            const errorMsg = error?.message || String(error);
             this.view?.webview.postMessage({
                 command: 'streamError',
-                error: error.message
+                error: '处理消息时出错: ' + errorMsg
             });
         }
     }
@@ -129,7 +130,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: https:;">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: var(--vscode-font-family); background: var(--vscode-sideBar-background); color: var(--vscode-foreground); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -217,13 +218,18 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         vscode.postMessage({ command: 'getSessions' });
         
         function send() {
-            const text = input.value.trim();
-            if (!text) return;
-            addMsg('user', text);
-            input.value = '';
-            sendBtn.disabled = true;
-            showStreamingMsg();
-            vscode.postMessage({ command: 'sendMessage', data: text });
+            try {
+                const text = input.value.trim();
+                if (!text) return;
+                addMsg('user', text);
+                input.value = '';
+                sendBtn.disabled = true;
+                showStreamingMsg();
+                vscode.postMessage({ command: 'sendMessage', data: text });
+            } catch (err) {
+                addMsg('error', '发送错误: ' + (err.message || err));
+                sendBtn.disabled = false;
+            }
         }
         
         function addMsg(role, content) {
@@ -399,6 +405,11 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         
         toggleSessions.onclick = () => {
             sessionList.classList.toggle('hidden');
+        };
+        
+        window.onerror = function(msg, url, line, col, error) {
+            addMsg('error', 'JS错误: ' + msg + ' at line ' + line);
+            return false;
         };
         
         window.onmessage = e => {

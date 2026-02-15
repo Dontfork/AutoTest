@@ -58,6 +58,36 @@ describe('AIChatView WebView Template - WebView模板测试', () => {
         });
     });
 
+    describe('错误处理验证', () => {
+        it('应包含全局错误处理', () => {
+            const template = getTemplate();
+            assert.ok(template.includes('window.onerror'));
+        });
+
+        it('send函数应包含try-catch错误处理', () => {
+            const template = getTemplate();
+            assert.ok(template.includes('function send()'));
+            assert.ok(template.includes('try {'));
+            assert.ok(template.includes("} catch (err) {"));
+        });
+
+        it('send函数应显示发送错误信息', () => {
+            const template = getTemplate();
+            assert.ok(template.includes("'发送错误: '"));
+        });
+
+        it('handleSendMessage应处理错误响应', () => {
+            const template = getTemplate();
+            assert.ok(template.includes('response.error'));
+            assert.ok(template.includes('streamError'));
+        });
+
+        it('handleSendMessage应捕获异常并显示错误', () => {
+            const template = getTemplate();
+            assert.ok(template.includes("'处理消息时出错: '"));
+        });
+    });
+
     describe('Markdown渲染验证', () => {
         it('应包含renderMarkdown函数', () => {
             const template = getTemplate();
@@ -140,6 +170,23 @@ describe('AIChatView WebView Template - WebView模板测试', () => {
         it('应包含流式消息光标动画', () => {
             const template = getTemplate();
             assert.ok(template.includes('@keyframes blink'));
+        });
+    });
+
+    describe('CSP安全策略验证', () => {
+        it('应包含Content-Security-Policy', () => {
+            const template = getTemplate();
+            assert.ok(template.includes('Content-Security-Policy'));
+        });
+
+        it('应允许内联样式', () => {
+            const template = getTemplate();
+            assert.ok(template.includes("style-src 'unsafe-inline'"));
+        });
+
+        it('应允许内联脚本', () => {
+            const template = getTemplate();
+            assert.ok(template.includes("script-src 'unsafe-inline'"));
         });
     });
 });
