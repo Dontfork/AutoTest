@@ -167,12 +167,12 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         .bubble em { color: #d0d0d0; }
         .input-area { padding: 12px 16px; border-top: 1px solid #3c3c3c; background: transparent; }
         .input-wrap { display: flex; gap: 8px; align-items: center; }
-        textarea { flex: 1; padding: 10px 12px; background: transparent; color: #cccccc; border: 1px solid #3c3c3c; border-radius: 4px; resize: none; font-family: inherit; font-size: 14px; line-height: 1.5; }
-        textarea:focus { outline: none; border-color: #858585; }
-        button#sendBtn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: transparent; color: #858585; border: 1px solid #3c3c3c; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
-        button#sendBtn:hover { color: #cccccc; border-color: #858585; }
-        button#sendBtn:disabled { color: #3c3c3c; border-color: #3c3c3c; cursor: not-allowed; }
-        button#sendBtn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.5; fill: none; }
+        textarea { flex: 1; padding: 8px 0; background: transparent; color: #cccccc; border: none; resize: none; font-family: inherit; font-size: 14px; line-height: 1.4; min-height: 36px; }
+        textarea:focus { outline: none; }
+        button#sendBtn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: transparent; color: #858585; border: none; cursor: pointer; transition: all 0.2s; }
+        button#sendBtn:hover { color: #cccccc; }
+        button#sendBtn:disabled { color: #3c3c3c; cursor: not-allowed; }
+        button#sendBtn svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.5; fill: none; }
         .welcome { text-align: center; padding: 60px 20px; color: #858585; }
         .welcome-icon { width: 48px; height: 48px; margin: 0 auto 16px; stroke: #858585; stroke-width: 1; fill: none; }
         .welcome h2 { color: #cccccc; margin-bottom: 8px; font-weight: 400; }
