@@ -77,7 +77,7 @@ export class SessionManager {
 
     getCurrentSession(): ChatSession | null {
         if (!this.currentSessionId) {
-            return this.createSession();
+            return null;
         }
         return this.sessions.get(this.currentSessionId) || null;
     }

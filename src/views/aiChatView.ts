@@ -41,7 +41,10 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                     this.sendCurrentSession();
                     break;
                 case 'newSession':
-                    this.aiChat.createNewSession();
+                    const currentSession = this.aiChat.getCurrentSession();
+                    if (!currentSession || currentSession.messages.length > 0) {
+                        this.aiChat.createNewSession();
+                    }
                     this.sendSessions();
                     this.sendCurrentSession();
                     break;
