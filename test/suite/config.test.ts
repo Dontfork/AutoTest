@@ -13,7 +13,7 @@ const defaultConfig = {
     },
     command: {
         executeCommand: "pytest {filePath} -v",
-        filterPatterns: ["PASSED", "FAILED", "ERROR"],
+        filterPatterns: ["error", "failed", "FAILED", "Error", "ERROR"],
         filterMode: "include" as 'include' | 'exclude'
     },
     ai: {
@@ -103,9 +103,9 @@ describe('Config Module - 配置模块测试', () => {
             assert.ok(defaultConfig.command.executeCommand.includes('{filePath}'));
         });
 
-        it('验证默认过滤模式 - 应包含PASSED、FAILED、ERROR', () => {
-            assert.ok(defaultConfig.command.filterPatterns.includes('PASSED'));
-            assert.ok(defaultConfig.command.filterPatterns.includes('FAILED'));
+        it('验证默认过滤模式 - 应包含error、failed等关键词', () => {
+            assert.ok(defaultConfig.command.filterPatterns.includes('error'));
+            assert.ok(defaultConfig.command.filterPatterns.includes('failed'));
             assert.ok(defaultConfig.command.filterPatterns.includes('ERROR'));
         });
     });

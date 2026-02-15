@@ -3,8 +3,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getConfig } from '../config';
 import { SCPClient } from './scpClient';
-import { executeRemoteCommand } from './sshClient';
 import { CommandExecutor, replaceCommandVariables, buildCommandVariables } from './commandExecutor';
+import { executeRemoteCommand, filterCommandOutput } from './sshClient';
 
 export class FileUploader {
     private commandExecutor: CommandExecutor;
@@ -124,7 +124,14 @@ export class FileUploader {
         this.outputChannel.appendLine(`[变量替换] 原始命令: ${config.command.executeCommand}`);
         this.outputChannel.appendLine(`[变量替换] 替换后: ${command}`);
         
-        const result = await executeRemoteCommand(command, this.outputChannel);
+        const result = await executeRemoteCommand(
+            command, 
+            this.outputChannel,
+            {
+                patterns: config.command.filterPatterns || [],
+                mode: config.command.filterMode || 'include'
+            }
+        );
         
         if (result.code !== 0) {
             this.outputChannel.appendLine(`[警告] 命令退出码: ${result.code}`);

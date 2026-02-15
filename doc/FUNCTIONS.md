@@ -200,7 +200,7 @@ AutoTest 提供两种文件操作方式：
   },
   "command": {
     "executeCommand": "pytest {filePath} -v",
-    "filterPatterns": ["PASSED", "FAILED", "ERROR"],
+    "filterPatterns": ["error", "failed", "FAILED", "Error", "ERROR"],
     "filterMode": "include"
   }
 }
@@ -237,7 +237,7 @@ AutoTest 提供两种文件操作方式：
 ```json
 {
   "executeCommand": "cd {remoteDir} && pytest {filePath} -v",
-  "filterPatterns": ["PASSED", "FAILED", "ERROR"],
+  "filterPatterns": ["error", "failed", "FAILED", "Error", "ERROR"],
   "filterMode": "include"
 }
 ```
@@ -305,7 +305,7 @@ AutoTest 提供两种文件操作方式：
   },
   "command": {
     "executeCommand": "pytest {filePath} -v",
-    "filterPatterns": ["PASSED", "FAILED", "ERROR"],
+    "filterPatterns": ["error", "failed", "FAILED", "Error", "ERROR"],
     "filterMode": "include"
   },
   "ai": {

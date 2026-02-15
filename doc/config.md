@@ -161,7 +161,7 @@ executeCommand 支持以下变量，在执行时自动替换为对应的值：
 {
     "command": {
         "executeCommand": "pytest {filePath} -v",
-        "filterPatterns": ["PASSED", "FAILED", "ERROR"],
+        "filterPatterns": ["error", "failed", "FAILED", "Error", "ERROR"],
         "filterMode": "include"
     }
 }
@@ -384,7 +384,7 @@ const defaultConfig: AutoTestConfig = {
     },
     command: {
         executeCommand: "pytest {filePath} -v",
-        filterPatterns: ["PASSED", "FAILED", "ERROR"],
+        filterPatterns: ["error", "failed", "FAILED", "Error", "ERROR"],
         filterMode: "include"
     },
     ai: {

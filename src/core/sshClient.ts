@@ -66,7 +66,47 @@ export class SSHClient {
     }
 }
 
-export async function executeRemoteCommand(command: string, outputChannel?: vscode.OutputChannel): Promise<{ stdout: string; stderr: string; code: number }> {
+export function filterCommandOutput(
+    output: string,
+    patterns: string[],
+    filterMode: 'include' | 'exclude'
+): string {
+    if (!patterns || patterns.length === 0) {
+        return output;
+    }
+
+    const lines = output.split('\n');
+    const filteredLines: string[] = [];
+
+    for (const line of lines) {
+        const matchesPattern = patterns.some(pattern => {
+            try {
+                const regex = new RegExp(pattern, 'i');
+                return regex.test(line);
+            } catch {
+                return line.toLowerCase().includes(pattern.toLowerCase());
+            }
+        });
+
+        if (filterMode === 'include') {
+            if (matchesPattern) {
+                filteredLines.push(line);
+            }
+        } else {
+            if (!matchesPattern) {
+                filteredLines.push(line);
+            }
+        }
+    }
+
+    return filteredLines.join('\n');
+}
+
+export async function executeRemoteCommand(
+    command: string,
+    outputChannel?: vscode.OutputChannel,
+    filterConfig?: { patterns: string[]; mode: 'include' | 'exclude' }
+): Promise<{ stdout: string; stderr: string; code: number; filteredOutput: string }> {
     const sshClient = new SSHClient();
     
     try {
@@ -94,29 +134,36 @@ export async function executeRemoteCommand(command: string, outputChannel?: vsco
 
                 stream.on('close', (code: number, signal: string) => {
                     exitCode = code;
+                    
+                    const combinedOutput = stdout + stderr;
+                    let filteredOutput = combinedOutput;
+                    
+                    if (filterConfig && filterConfig.patterns.length > 0) {
+                        filteredOutput = filterCommandOutput(combinedOutput, filterConfig.patterns, filterConfig.mode);
+                    }
+                    
                     if (outputChannel) {
                         outputChannel.appendLine('─'.repeat(50));
+                        if (filterConfig && filterConfig.patterns.length > 0) {
+                            outputChannel.appendLine('[过滤后输出]');
+                            outputChannel.appendLine(filteredOutput);
+                        }
                         outputChannel.appendLine(`[执行完成] 退出码: ${code}`);
                         outputChannel.show();
                     }
-                    resolve({ stdout, stderr, code: exitCode });
+                    
+                    resolve({ stdout, stderr, code: exitCode, filteredOutput });
                     sshClient.disconnect();
                 });
 
                 stream.on('data', (data: Buffer) => {
                     const text = data.toString();
                     stdout += text;
-                    if (outputChannel) {
-                        outputChannel.append(text);
-                    }
                 });
 
                 stream.stderr.on('data', (data: Buffer) => {
                     const text = data.toString();
                     stderr += text;
-                    if (outputChannel) {
-                        outputChannel.append(text);
-                    }
                 });
             });
         });

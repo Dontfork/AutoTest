@@ -66,7 +66,7 @@ vsce package
   },
   "command": {
     "executeCommand": "pytest {filePath} -v",
-    "filterPatterns": ["PASSED", "FAILED", "ERROR"],
+    "filterPatterns": ["error", "failed", "FAILED", "Error", "ERROR"],
     "filterMode": "include"
   },
   "ai": {

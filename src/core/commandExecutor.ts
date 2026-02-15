@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { getConfig } from '../config';
-import { executeRemoteCommand } from './sshClient';
+import { executeRemoteCommand, filterCommandOutput } from './sshClient';
 import { CommandConfig, CommandVariables } from '../types';
 
 export class CommandExecutor {
@@ -26,47 +26,18 @@ export class CommandExecutor {
         return result;
     }
 
-    private filterOutput(output: string, patterns: string[], filterMode: 'include' | 'exclude'): string {
-        if (!patterns || patterns.length === 0) {
-            return output;
-        }
-
-        const lines = output.split('\n');
-        const filteredLines: string[] = [];
-
-        for (const line of lines) {
-            const matchesPattern = patterns.some(pattern => {
-                try {
-                    const regex = new RegExp(pattern, 'i');
-                    return regex.test(line);
-                } catch {
-                    return false;
-                }
-            });
-
-            if (filterMode === 'include') {
-                if (matchesPattern) {
-                    filteredLines.push(line);
-                }
-            } else {
-                if (!matchesPattern) {
-                    filteredLines.push(line);
-                }
-            }
-        }
-
-        return filteredLines.join('\n');
-    }
-
     async execute(command: string, filterConfig?: Partial<CommandConfig>): Promise<string> {
         const config = getConfig();
-        const { filterPatterns = [], filterMode = 'include' } = filterConfig || config.command;
+        const filterPatterns = filterConfig?.filterPatterns ?? config.command.filterPatterns ?? [];
+        const filterMode = filterConfig?.filterMode ?? config.command.filterMode ?? 'include';
 
         try {
-            const result = await executeRemoteCommand(command, this.outputChannel);
-            const combinedOutput = result.stdout + result.stderr;
-            const filteredOutput = this.filterOutput(combinedOutput, filterPatterns, filterMode);
-            return filteredOutput;
+            const result = await executeRemoteCommand(
+                command, 
+                this.outputChannel,
+                { patterns: filterPatterns, mode: filterMode }
+            );
+            return result.filteredOutput;
         } catch (error: any) {
             this.outputChannel.appendLine(`[执行错误] ${error.message}`);
             this.outputChannel.show();

@@ -11,8 +11,10 @@
   "command": {
     "executeCommand": "pytest {filePath} -v",
     "filterPatterns": [
-      "PASSED",
+      "error",
+      "failed",
       "FAILED",
+      "Error",
       "ERROR"
     ],
     "filterMode": "include"

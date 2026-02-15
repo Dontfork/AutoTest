@@ -162,8 +162,24 @@ interface CommandVariables {
 
 | 模式 | 行为 | 使用场景 |
 |------|------|----------|
-| include | 只保留匹配正则的行 | 只查看错误和警告信息 |
+| include | 只保留匹配正则的行 | 只查看错误和失败信息 |
 | exclude | 排除匹配正则的行 | 过滤掉调试信息 |
+
+### 3.5 默认过滤配置
+
+默认配置保留包含错误和失败信息的输出行：
+
+```json
+{
+    "filterPatterns": ["error", "failed", "FAILED", "Error", "ERROR"],
+    "filterMode": "include"
+}
+```
+
+**说明**：
+- 默认使用 `include` 模式，只显示包含错误或失败的行
+- 支持正则表达式匹配（不区分大小写）
+- 如果正则表达式无效，会降级为字符串包含匹配
 
 ## 4. 功能实现
 
@@ -360,7 +376,7 @@ const output = await executor.executeWithConfig(variables);
 {
     "command": {
         "executeCommand": "pytest {filePath} -v --tb=short",
-        "filterPatterns": ["PASSED", "FAILED", "ERROR"],
+        "filterPatterns": ["error", "failed", "FAILED", "Error", "ERROR"],
         "filterMode": "include"
     }
 }
@@ -372,7 +388,7 @@ const output = await executor.executeWithConfig(variables);
 ```json
 {
     "executeCommand": "cd {remoteDir} && pytest {filePath} -v",
-    "filterPatterns": ["PASSED", "FAILED", "ERROR"],
+    "filterPatterns": ["error", "failed", "FAILED", "Error", "ERROR"],
     "filterMode": "include"
 }
 ```
