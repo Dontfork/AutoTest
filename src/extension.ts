@@ -28,7 +28,6 @@ export function activate(context: vscode.ExtensionContext) {
     setupConfigWatcher(context);
 
     onConfigChanged((newConfig) => {
-        console.log('[AutoTest] Config updated, components notified');
         if (logTreeView) {
             logTreeView.refresh();
         }

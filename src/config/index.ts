@@ -89,11 +89,9 @@ export function loadConfig(workspacePath: string): AutoTestConfig {
     }
 
     configFilePath = fullPath;
-    console.log('[AutoTest] Loading config from:', fullPath);
 
     try {
         if (!fs.existsSync(fullPath)) {
-            console.log('[AutoTest] Config file not found, creating default config');
             const vscodeDir = path.join(workspacePath, '.vscode');
             if (!fs.existsSync(vscodeDir)) {
                 fs.mkdirSync(vscodeDir, { recursive: true });
@@ -106,13 +104,8 @@ export function loadConfig(workspacePath: string): AutoTestConfig {
         const content = fs.readFileSync(fullPath, 'utf-8');
         const loadedConfig = JSON.parse(content);
         config = deepMerge(defaultConfig, loadedConfig);
-        console.log('[AutoTest] Config loaded successfully');
-        console.log('[AutoTest] AI Provider:', config?.ai?.provider);
-        console.log('[AutoTest] QWen API Key:', config?.ai?.qwen?.apiKey ? '已配置' : '未配置');
         return config as AutoTestConfig;
     } catch (error: any) {
-        console.error('[AutoTest] Config load error:', error.message);
-        console.log('[AutoTest] Using default config due to error');
         config = defaultConfig;
         return config as AutoTestConfig;
     }
@@ -125,7 +118,6 @@ export function getConfig(): AutoTestConfig {
 export function reloadConfig(workspacePath?: string): AutoTestConfig {
     const wsPath = workspacePath || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!wsPath) {
-        console.warn('[AutoTest] No workspace path available for config reload');
         return getConfig();
     }
     
@@ -134,7 +126,6 @@ export function reloadConfig(workspacePath?: string): AutoTestConfig {
     
     if (JSON.stringify(oldConfig) !== JSON.stringify(newConfig)) {
         configChangeEmitter.fire(newConfig);
-        console.log('[AutoTest] Config changed, notifying listeners');
     }
     
     return newConfig;
@@ -147,16 +138,10 @@ export function setupConfigWatcher(context: vscode.ExtensionContext): void {
 
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!workspacePath) {
-        console.warn('[AutoTest] No workspace available for config watcher');
         return;
     }
 
     const configPath = vscode.workspace.getConfiguration('autotest').get<string>('configPath') || 'autotest-config.json';
-    
-    const watchPatterns = [
-        new vscode.RelativePattern(workspacePath, `.vscode/${configPath}`),
-        new vscode.RelativePattern(workspacePath, configPath)
-    ];
 
     fileWatcher = vscode.workspace.createFileSystemWatcher(
         new vscode.RelativePattern(workspacePath, `**/${configPath}`),
@@ -166,26 +151,22 @@ export function setupConfigWatcher(context: vscode.ExtensionContext): void {
     );
 
     fileWatcher.onDidChange((uri) => {
-        console.log('[AutoTest] Config file changed:', uri.fsPath);
         reloadConfig(workspacePath);
         vscode.window.showInformationMessage('AutoTest 配置已自动刷新');
     });
 
     fileWatcher.onDidCreate((uri) => {
-        console.log('[AutoTest] Config file created:', uri.fsPath);
         reloadConfig(workspacePath);
         vscode.window.showInformationMessage('AutoTest 配置文件已创建并加载');
     });
 
     fileWatcher.onDidDelete((uri) => {
-        console.log('[AutoTest] Config file deleted:', uri.fsPath);
         config = defaultConfig;
         configChangeEmitter.fire(defaultConfig);
         vscode.window.showWarningMessage('AutoTest 配置文件已删除，使用默认配置');
     });
 
     context.subscriptions.push(fileWatcher);
-    console.log('[AutoTest] Config watcher setup complete');
 }
 
 export function getConfigFilePath(): string {

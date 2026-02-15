@@ -43,7 +43,6 @@ export class LogMonitor {
                 return a.name.localeCompare(b.name);
             });
         } catch (error: any) {
-            console.error(`[LogMonitor] 获取目录 ${dirPath} 内容失败:`, error.message);
             return [];
         }
     }
