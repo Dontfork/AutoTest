@@ -199,31 +199,45 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         function renderMarkdown(text) {
             if (!text) return '<p></p>';
             let html = escapeHtml(text);
-            html = html.replace(/```(\\w*)\\n([\\s\\S]*?)```/g, function(m, lang, code) {
+            
+            var codeBlockRe = new RegExp('\`\`\`(\\w*)\\n([\\s\\S]*?)\`\`\`', 'g');
+            html = html.replace(codeBlockRe, function(m, lang, code) {
                 return '<pre><code class="language-' + lang + '">' + code.trim() + '</code></pre>';
             });
-            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-            html = html.replace(/\\*\\*([^\\*]+)\\*\\*/g, '<strong>$1</strong>');
+            
+            var inlineCodeRe = new RegExp('\`([^\`]+)\`', 'g');
+            html = html.replace(inlineCodeRe, '<code>$1</code>');
+            
+            var boldRe = new RegExp('\\*\\*([^\\*]+)\\*\\*', 'g');
+            html = html.replace(boldRe, '<strong>$1</strong>');
+            
             html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
             html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
             html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
             html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
             html = html.replace(/^[-] (.+)$/gm, '<li>$1</li>');
             html = html.replace(/^[*] (.+)$/gm, '<li>$1</li>');
-            html = html.replace(/(<li>.*<\\/li>\\n?)+/g, '<ul>$&</ul>');
-            html = html.replace(/\\*([^\\*\\n]+?)\\*/g, '<em>$1</em>');
-            html = html.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2">$1</a>');
-            html = html.replace(/\\n\\n/g, '</p><p>');
+            
+            var listRe = new RegExp('(<li>.*</li>\\n?)+', 'g');
+            html = html.replace(listRe, '<ul>$&</ul>');
+            
+            var italicRe = new RegExp('\\*([^\\*\\n]+?)\\*', 'g');
+            html = html.replace(italicRe, '<em>$1</em>');
+            
+            var linkRe = new RegExp('\\[([^\\]]+)\\]\\(([^)]+)\\)', 'g');
+            html = html.replace(linkRe, '<a href="$2">$1</a>');
+            
+            html = html.replace(/\n\n/g, '</p><p>');
             html = '<p>' + html + '</p>';
-            html = html.replace(/<p><\\/p>/g, '');
+            html = html.replace(/<p><\/p>/g, '');
             html = html.replace(/<p>(<h[1-6]>)/g, '$1');
-            html = html.replace(/(<\\/h[1-6]>)<\\/p>/g, '$1');
+            html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1');
             html = html.replace(/<p>(<pre>)/g, '$1');
-            html = html.replace(/(<\\/pre>)<\\/p>/g, '$1');
+            html = html.replace(/(<\/pre>)<\/p>/g, '$1');
             html = html.replace(/<p>(<ul>)/g, '$1');
-            html = html.replace(/(<\\/ul>)<\\/p>/g, '$1');
+            html = html.replace(/(<\/ul>)<\/p>/g, '$1');
             html = html.replace(/<p>(<blockquote>)/g, '$1');
-            html = html.replace(/(<\\/blockquote>)<\\/p>/g, '$1');
+            html = html.replace(/(<\/blockquote>)<\/p>/g, '$1');
             return html;
         }
         
