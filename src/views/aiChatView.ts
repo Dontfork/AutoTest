@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { marked } from 'marked';
 import { AIChat } from '../ai';
 import { SessionManager } from '../ai/sessionManager';
 import { ChatSession } from '../types';
@@ -109,9 +110,11 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                     error: response.error
                 });
             } else {
+                const markdownContent = response.content || fullContent;
+                const htmlContent = await marked(markdownContent);
                 this.view?.webview.postMessage({
                     command: 'streamComplete',
-                    data: response.content || fullContent
+                    data: htmlContent
                 });
                 this.sendSessions();
             }
@@ -196,45 +199,6 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
         
-        function renderMarkdown(text) {
-            if (!text) return '<p></p>';
-            let html = escapeHtml(text);
-            
-            html = html.replace(/\`\`\`(\w*)\n([\s\S]*?)\`\`\`/g, function(m, lang, code) {
-                return '<pre><code class="language-' + lang + '">' + code.trim() + '</code></pre>';
-            });
-            
-            html = html.replace(/\`([^\`]+)\`/g, '<code>$1</code>');
-            
-            html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
-            
-            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-            html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-            html = html.replace(/^[-] (.+)$/gm, '<li>$1</li>');
-            html = html.replace(/^[*] (.+)$/gm, '<li>$1</li>');
-            
-            html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
-            
-            html = html.replace(/\*([^\*\n]+?)\*/g, '<em>$1</em>');
-            
-            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-            
-            html = html.replace(/\n\n/g, '</p><p>');
-            html = '<p>' + html + '</p>';
-            html = html.replace(/<p><\/p>/g, '');
-            html = html.replace(/<p>(<h[1-6]>)/g, '$1');
-            html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1');
-            html = html.replace(/<p>(<pre>)/g, '$1');
-            html = html.replace(/(<\/pre>)<\/p>/g, '$1');
-            html = html.replace(/<p>(<ul>)/g, '$1');
-            html = html.replace(/(<\/ul>)<\/p>/g, '$1');
-            html = html.replace(/<p>(<blockquote>)/g, '$1');
-            html = html.replace(/(<\/blockquote>)<\/p>/g, '$1');
-            return html;
-        }
-        
         function addMessage(role, content) {
             const welcome = messages.querySelector('.welcome');
             if (welcome) welcome.remove();
@@ -292,8 +256,8 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 const lastMsg = messages.lastChild;
                 if (lastMsg && lastMsg.classList.contains('assistant')) {
                     const bubble = lastMsg.querySelector('.bubble');
-                    if (bubble && rawContent) {
-                        bubble.innerHTML = renderMarkdown(rawContent);
+                    if (bubble && m.data) {
+                        bubble.innerHTML = m.data;
                     }
                 }
             } else if (m.command === 'streamError') {
