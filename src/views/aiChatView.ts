@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { AIChat } from '../ai';
 import { SessionManager } from '../ai/sessionManager';
 import { ChatSession } from '../types';
-import { log, logError } from '../utils/logger';
 
 export class AIChatViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'autotest-ai-view';
@@ -93,32 +92,23 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     }
 
     private async handleSendMessage(userMessage: string): Promise<void> {
-        log(`[AIChatView] handleSendMessage 开始, 消息: "${userMessage.substring(0, 50)}..."`);
-        
         try {
             let fullContent = '';
-            let chunkCount = 0;
             
             const response = await this.aiChat.sendMessageStream(userMessage, (chunk) => {
                 fullContent += chunk;
-                chunkCount++;
-                log(`[AIChatView] 收到 chunk #${chunkCount}, 长度: ${chunk.length}`);
                 this.view?.webview.postMessage({
                     command: 'streamChunk',
                     data: chunk
                 });
             });
 
-            log(`[AIChatView] sendStream 完成, 总 chunks: ${chunkCount}, 总长度: ${fullContent.length}`);
-
             if (response.error) {
-                logError('[AIChatView] 响应包含错误', response.error);
                 this.view?.webview.postMessage({
                     command: 'streamError',
                     error: response.error
                 });
             } else {
-                log('[AIChatView] 发送 streamComplete');
                 this.view?.webview.postMessage({
                     command: 'streamComplete',
                     data: fullContent
@@ -126,7 +116,6 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 this.sendSessions();
             }
         } catch (error: any) {
-            logError('[AIChatView] handleSendMessage 异常', error.message);
             this.view?.webview.postMessage({
                 command: 'streamError',
                 error: error.message
