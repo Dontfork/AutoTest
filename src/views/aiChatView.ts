@@ -141,7 +141,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1e1e1e; color: #cccccc; height: 100vh; display: flex; flex-direction: column; }
-        .toolbar { padding: 8px 12px; border-bottom: 1px solid #3c3c3c; display: flex; gap: 8px; align-items: center; position: relative; }
+        .toolbar { padding: 4px 12px; border-bottom: 1px solid #3c3c3c; display: flex; gap: 8px; align-items: flex-start; position: relative; }
         .toolbar button { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: transparent; color: #858585; border: none; cursor: pointer; transition: all 0.2s; }
         .toolbar button:hover { color: #cccccc; }
         .toolbar button svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.5; fill: none; }
