@@ -289,7 +289,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                             rawContent = '';
                         }
                         rawContent += m.data;
-                        bubble.innerHTML = renderMarkdown(rawContent);
+                        bubble.textContent = rawContent;
                         messages.scrollTop = messages.scrollHeight;
                     }
                 }
