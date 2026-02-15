@@ -139,10 +139,23 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         .toolbar button:hover { background: #1177bb; }
         .messages { flex: 1; overflow-y: auto; padding: 12px; }
         .msg { margin-bottom: 12px; }
-        .bubble { padding: 10px 14px; border-radius: 8px; max-width: 90%; }
+        .bubble { padding: 10px 14px; border-radius: 8px; max-width: 90%; line-height: 1.5; }
         .user .bubble { background: #0e639c; color: white; margin-left: auto; }
         .assistant .bubble { background: #2d2d2d; border: 1px solid #3c3c3c; }
         .error .bubble { background: #5a1d1d; border: 1px solid #be1100; color: #ff6b6b; }
+        .bubble pre { background: #1e1e1e; padding: 8px 12px; border-radius: 4px; overflow-x: auto; margin: 8px 0; }
+        .bubble code { background: #1e1e1e; padding: 2px 6px; border-radius: 3px; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9em; }
+        .bubble pre code { background: none; padding: 0; }
+        .bubble h1, .bubble h2, .bubble h3 { margin: 12px 0 8px 0; color: #e0e0e0; }
+        .bubble h1 { font-size: 1.4em; }
+        .bubble h2 { font-size: 1.2em; }
+        .bubble h3 { font-size: 1.1em; }
+        .bubble ul, .bubble ol { margin: 8px 0; padding-left: 20px; }
+        .bubble li { margin: 4px 0; }
+        .bubble blockquote { border-left: 3px solid #0e639c; padding-left: 12px; margin: 8px 0; color: #a0a0a0; }
+        .bubble a { color: #3794ff; }
+        .bubble strong { color: #ffffff; }
+        .bubble em { color: #d0d0d0; }
         .input-area { padding: 12px; border-top: 1px solid #3c3c3c; }
         .input-wrap { display: flex; gap: 8px; }
         textarea { flex: 1; padding: 10px; background: #3c3c3c; color: #cccccc; border: 1px solid #3c3c3c; border-radius: 4px; resize: none; font-family: inherit; }
@@ -177,6 +190,42 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         const input = document.getElementById('input');
         const sendBtn = document.getElementById('sendBtn');
         const newBtn = document.getElementById('newBtn');
+        let rawContent = '';
+        
+        function escapeHtml(text) {
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+        
+        function renderMarkdown(text) {
+            if (!text) return '<p></p>';
+            let html = escapeHtml(text);
+            html = html.replace(/```(\\w*)\\n([\\s\\S]*?)```/g, function(m, lang, code) {
+                return '<pre><code class="language-' + lang + '">' + code.trim() + '</code></pre>';
+            });
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            html = html.replace(/\\*\\*([^\\*]+)\\*\\*/g, '<strong>$1</strong>');
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+            html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+            html = html.replace(/^[-] (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/^[*] (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/(<li>.*<\\/li>\\n?)+/g, '<ul>$&</ul>');
+            html = html.replace(/\\*([^\\*\\n]+?)\\*/g, '<em>$1</em>');
+            html = html.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2">$1</a>');
+            html = html.replace(/\\n\\n/g, '</p><p>');
+            html = '<p>' + html + '</p>';
+            html = html.replace(/<p><\\/p>/g, '');
+            html = html.replace(/<p>(<h[1-6]>)/g, '$1');
+            html = html.replace(/(<\\/h[1-6]>)<\\/p>/g, '$1');
+            html = html.replace(/<p>(<pre>)/g, '$1');
+            html = html.replace(/(<\\/pre>)<\\/p>/g, '$1');
+            html = html.replace(/<p>(<ul>)/g, '$1');
+            html = html.replace(/(<\\/ul>)<\\/p>/g, '$1');
+            html = html.replace(/<p>(<blockquote>)/g, '$1');
+            html = html.replace(/(<\\/blockquote>)<\\/p>/g, '$1');
+            return html;
+        }
         
         function addMessage(role, content) {
             const welcome = messages.querySelector('.welcome');
@@ -192,9 +241,10 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         function send() {
             const text = input.value.trim();
             if (!text) return;
-            addMessage('user', text);
+            addMessage('user', escapeHtml(text));
             input.value = '';
             sendBtn.disabled = true;
+            rawContent = '';
             addMessage('assistant', '思考中...');
             vscode.postMessage({ command: 'sendMessage', data: text });
         }
@@ -209,6 +259,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         
         newBtn.onclick = function() {
             messages.innerHTML = '<div class="welcome"><h2>AutoTest AI 助手</h2><p>输入问题开始对话</p></div>';
+            rawContent = '';
             vscode.postMessage({ command: 'newSession' });
         };
         
@@ -219,13 +270,24 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 if (lastMsg && lastMsg.classList.contains('assistant')) {
                     const bubble = lastMsg.querySelector('.bubble');
                     if (bubble) {
-                        if (bubble.textContent === '思考中...') bubble.textContent = '';
-                        bubble.textContent += m.data;
+                        if (bubble.textContent === '思考中...') {
+                            bubble.textContent = '';
+                            rawContent = '';
+                        }
+                        rawContent += m.data;
+                        bubble.innerHTML = renderMarkdown(rawContent);
                         messages.scrollTop = messages.scrollHeight;
                     }
                 }
             } else if (m.command === 'streamComplete') {
                 sendBtn.disabled = false;
+                const lastMsg = messages.lastChild;
+                if (lastMsg && lastMsg.classList.contains('assistant')) {
+                    const bubble = lastMsg.querySelector('.bubble');
+                    if (bubble && rawContent) {
+                        bubble.innerHTML = renderMarkdown(rawContent);
+                    }
+                }
             } else if (m.command === 'streamError') {
                 addMessage('error', m.error);
                 sendBtn.disabled = false;

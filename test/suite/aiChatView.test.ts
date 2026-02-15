@@ -68,4 +68,59 @@ describe('AIChatView WebView Template - WebView模板测试', () => {
         assert.ok(template.includes('Enter'));
         assert.ok(template.includes('preventDefault'));
     });
+
+    it('模板应包含Markdown渲染函数', () => {
+        const template = getTemplate();
+        assert.ok(template.includes('function renderMarkdown'));
+    });
+
+    it('模板应包含HTML转义函数', () => {
+        const template = getTemplate();
+        assert.ok(template.includes('function escapeHtml'));
+    });
+
+    it('Markdown渲染应支持代码块', () => {
+        const template = getTemplate();
+        assert.ok(template.includes('<pre>'));
+        assert.ok(template.includes('<code'));
+    });
+
+    it('Markdown渲染应支持标题', () => {
+        const template = getTemplate();
+        assert.ok(template.includes('<h1>'));
+        assert.ok(template.includes('<h2>'));
+        assert.ok(template.includes('<h3>'));
+    });
+
+    it('Markdown渲染应支持列表', () => {
+        const template = getTemplate();
+        assert.ok(template.includes('<li>'));
+        assert.ok(template.includes('<ul>'));
+    });
+
+    it('Markdown渲染应支持粗体和斜体', () => {
+        const template = getTemplate();
+        assert.ok(template.includes('<strong>'));
+        assert.ok(template.includes('<em>'));
+    });
+
+    it('Markdown渲染应支持引用块', () => {
+        const template = getTemplate();
+        assert.ok(template.includes('<blockquote>'));
+    });
+
+    it('Markdown渲染应支持链接', () => {
+        const template = getTemplate();
+        assert.ok(template.includes('<a href'));
+    });
+
+    it('应使用rawContent变量存储原始内容', () => {
+        const template = getTemplate();
+        assert.ok(template.includes('let rawContent'));
+    });
+
+    it('流式输出时应实时渲染Markdown', () => {
+        const template = getTemplate();
+        assert.ok(template.includes('bubble.innerHTML = renderMarkdown(rawContent)'));
+    });
 });
