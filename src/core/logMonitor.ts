@@ -122,11 +122,19 @@ export class LogMonitor {
 }
 
 export function formatSize(bytes: number): string {
-    if (!bytes || bytes < 0) return '0 B';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-    if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
-    return (bytes / 1073741824).toFixed(2) + ' GB';
+    let result: string;
+    if (!bytes || bytes < 0) {
+        result = '0 B';
+    } else if (bytes < 1024) {
+        result = bytes + ' B';
+    } else if (bytes < 1048576) {
+        result = (bytes / 1024).toFixed(1) + ' KB';
+    } else if (bytes < 1073741824) {
+        result = (bytes / 1048576).toFixed(1) + ' MB';
+    } else {
+        result = (bytes / 1073741824).toFixed(2) + ' GB';
+    }
+    return result.padStart(8);
 }
 
 export function formatDate(date: Date): string {

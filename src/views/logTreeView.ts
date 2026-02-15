@@ -34,7 +34,7 @@ export class LogTreeItem extends vscode.TreeItem {
             this.directoryConfig = null;
             const sizeStr = formatSize(file.size);
             const dateStr = formatDate(file.modifiedTime);
-            this.description = `\t${sizeStr}\t${dateStr}`;
+            this.description = `${sizeStr}  ${dateStr}`;
             this.tooltip = `路径: ${file.path}\n大小: ${formatSize(file.size)}\n修改时间: ${formatDate(file.modifiedTime)}`;
             this.contextValue = 'logFile';
             this.iconPath = new vscode.ThemeIcon('file-text');
