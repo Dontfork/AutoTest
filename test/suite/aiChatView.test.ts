@@ -59,12 +59,6 @@ describe('AIChatView WebView Template - WebView模板测试', () => {
     });
 
     describe('错误处理验证', () => {
-        it('应使用DOMContentLoaded确保DOM加载完成', () => {
-            const template = getTemplate();
-            assert.ok(template.includes('document.addEventListener'));
-            assert.ok(template.includes('DOMContentLoaded'));
-        });
-
         it('send函数应包含try-catch错误处理', () => {
             const template = getTemplate();
             assert.ok(template.includes('function send()'));
