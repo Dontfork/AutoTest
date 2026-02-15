@@ -14,8 +14,8 @@ export class FileUploader {
 
     constructor(commandExecutor: CommandExecutor) {
         this.commandExecutor = commandExecutor;
-        this.pluginChannel = vscode.window.createOutputChannel('AutoTest');
-        this.testOutputChannel = vscode.window.createOutputChannel('TestOutput');
+        this.pluginChannel = commandExecutor.getPluginChannel();
+        this.testOutputChannel = commandExecutor.getTestOutputChannel();
     }
 
     setOnTestCaseComplete(callback: () => void): void {

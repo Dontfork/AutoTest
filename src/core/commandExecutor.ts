@@ -5,11 +5,12 @@ import { executeRemoteCommand, filterCommandOutput } from './sshClient';
 import { CommandConfig, CommandVariables } from '../types';
 
 export class CommandExecutor {
-    private terminalName = 'AutoTest';
-    private outputChannel: vscode.OutputChannel;
+    private pluginChannel: vscode.OutputChannel;
+    private testOutputChannel: vscode.OutputChannel;
 
     constructor() {
-        this.outputChannel = vscode.window.createOutputChannel(this.terminalName);
+        this.pluginChannel = vscode.window.createOutputChannel('AutoTest');
+        this.testOutputChannel = vscode.window.createOutputChannel('TestOutput');
     }
 
     replaceVariables(command: string, variables: CommandVariables): string {
@@ -34,13 +35,13 @@ export class CommandExecutor {
         try {
             const result = await executeRemoteCommand(
                 command, 
-                this.outputChannel,
+                this.testOutputChannel,
                 { patterns: filterPatterns, mode: filterMode }
             );
             return result.filteredOutput;
         } catch (error: any) {
-            this.outputChannel.appendLine(`[执行错误] ${error.message}`);
-            this.outputChannel.show();
+            this.pluginChannel.appendLine(`[执行错误] ${error.message}`);
+            this.pluginChannel.show();
             throw error;
         }
     }
@@ -51,23 +52,33 @@ export class CommandExecutor {
         
         if (variables) {
             command = this.replaceVariables(command, variables);
-            this.outputChannel.appendLine(`[变量替换] 原始命令: ${config.command.executeCommand}`);
-            this.outputChannel.appendLine(`[变量替换] 替换后: ${command}`);
+            this.pluginChannel.appendLine(`[变量替换] 原始命令: ${config.command.executeCommand}`);
+            this.pluginChannel.appendLine(`[变量替换] 替换后: ${command}`);
         }
         
         return this.execute(command);
     }
 
+    getPluginChannel(): vscode.OutputChannel {
+        return this.pluginChannel;
+    }
+
+    getTestOutputChannel(): vscode.OutputChannel {
+        return this.testOutputChannel;
+    }
+
     showOutput(): void {
-        this.outputChannel.show();
+        this.pluginChannel.show();
     }
 
     clearOutput(): void {
-        this.outputChannel.clear();
+        this.pluginChannel.clear();
+        this.testOutputChannel.clear();
     }
 
     dispose(): void {
-        this.outputChannel.dispose();
+        this.pluginChannel.dispose();
+        this.testOutputChannel.dispose();
     }
 }
 
