@@ -1016,53 +1016,52 @@ describe('GitChangeDetector Module - Git变更检测模块测试', () => {
         });
     });
 
-    describe('selectable 命令过滤 - 运行用例时过滤', () => {
-        it('验证 selectable 为 true 的命令被过滤', () => {
-            const commands: Array<{ name: string; executeCommand: string; selectable?: boolean }> = [
-                { name: '命令1', executeCommand: 'cmd1', selectable: true },
-                { name: '命令2', executeCommand: 'cmd2', selectable: false },
+    describe('runnable 命令过滤 - 运行用例时过滤', () => {
+        it('验证 runnable 为 true 的命令可用', () => {
+            const commands: Array<{ name: string; executeCommand: string; runnable?: boolean }> = [
+                { name: '命令1', executeCommand: 'cmd1', runnable: true },
+                { name: '命令2', executeCommand: 'cmd2', runnable: false },
                 { name: '命令3', executeCommand: 'cmd3' }
             ];
 
-            const availableCommands = commands.filter(cmd => cmd.selectable === undefined);
+            const availableCommands = commands.filter(cmd => cmd.runnable === true);
             
             assert.strictEqual(availableCommands.length, 1);
-            assert.strictEqual(availableCommands[0].name, '命令3');
+            assert.strictEqual(availableCommands[0].name, '命令1');
         });
 
-        it('验证 selectable 为 false 的命令也被过滤', () => {
-            const commands: Array<{ name: string; executeCommand: string; selectable?: boolean }> = [
-                { name: '命令1', executeCommand: 'cmd1', selectable: true },
-                { name: '命令2', executeCommand: 'cmd2', selectable: false }
+        it('验证 runnable 为 false 的命令不可用', () => {
+            const commands: Array<{ name: string; executeCommand: string; runnable?: boolean }> = [
+                { name: '命令1', executeCommand: 'cmd1', runnable: true },
+                { name: '命令2', executeCommand: 'cmd2', runnable: false }
             ];
 
-            const availableCommands = commands.filter(cmd => cmd.selectable === undefined);
+            const availableCommands = commands.filter(cmd => cmd.runnable === true);
             
-            assert.strictEqual(availableCommands.length, 0);
+            assert.strictEqual(availableCommands.length, 1);
         });
 
-        it('验证未配置 selectable 的命令保留', () => {
-            const commands: Array<{ name: string; executeCommand: string; selectable?: boolean }> = [
+        it('验证未配置 runnable 的命令不可用', () => {
+            const commands: Array<{ name: string; executeCommand: string; runnable?: boolean }> = [
                 { name: '命令1', executeCommand: 'cmd1' },
                 { name: '命令2', executeCommand: 'cmd2' }
             ];
 
-            const availableCommands = commands.filter(cmd => cmd.selectable === undefined);
+            const availableCommands = commands.filter(cmd => cmd.runnable === true);
             
-            assert.strictEqual(availableCommands.length, 2);
+            assert.strictEqual(availableCommands.length, 0);
         });
 
-        it('验证 selectable 为 true 的命令在选择运行时可用', () => {
-            const commands: Array<{ name: string; executeCommand: string; selectable?: boolean }> = [
-                { name: '命令1', executeCommand: 'cmd1', selectable: true },
-                { name: '命令2', executeCommand: 'cmd2', selectable: false },
+        it('验证多个 runnable 为 true 的命令都可用', () => {
+            const commands: Array<{ name: string; executeCommand: string; runnable?: boolean }> = [
+                { name: '命令1', executeCommand: 'cmd1', runnable: true },
+                { name: '命令2', executeCommand: 'cmd2', runnable: true },
                 { name: '命令3', executeCommand: 'cmd3' }
             ];
 
-            const selectableCommands = commands.filter(cmd => cmd.selectable === true);
+            const runnableCommands = commands.filter(cmd => cmd.runnable === true);
             
-            assert.strictEqual(selectableCommands.length, 1);
-            assert.strictEqual(selectableCommands[0].name, '命令1');
+            assert.strictEqual(runnableCommands.length, 2);
         });
     });
 

@@ -1,46 +1,6 @@
 import * as assert from 'assert';
 
 describe('QuickCommandDetector Module - 快捷命令检测模块测试', () => {
-    describe('命令过滤逻辑 - selectable属性', () => {
-        it('验证selectable为true的命令被排除', () => {
-            const commands = [
-                { name: '运行测试', executeCommand: 'pytest {filePath}', selectable: true },
-                { name: '构建项目', executeCommand: 'npm run build', selectable: false },
-                { name: '部署', executeCommand: 'npm run deploy', selectable: undefined }
-            ];
-
-            const quickCommands = commands.filter(cmd => cmd.selectable !== true);
-            
-            assert.strictEqual(quickCommands.length, 2);
-            assert.strictEqual(quickCommands[0].name, '构建项目');
-            assert.strictEqual(quickCommands[1].name, '部署');
-        });
-
-        it('验证selectable未定义的命令被包含', () => {
-            const command = {
-                name: '清理缓存',
-                executeCommand: 'rm -rf cache',
-                selectable: undefined
-            };
-
-            const shouldInclude = command.selectable !== true;
-            
-            assert.strictEqual(shouldInclude, true);
-        });
-
-        it('验证selectable为false的命令被包含', () => {
-            const command = {
-                name: '重启服务',
-                executeCommand: 'systemctl restart myapp',
-                selectable: false
-            };
-
-            const shouldInclude = command.selectable !== true;
-            
-            assert.strictEqual(shouldInclude, true);
-        });
-    });
-
     describe('命令过滤逻辑 - 变量检测', () => {
         it('验证包含变量的命令被排除 - {filePath}', () => {
             const command = 'pytest {filePath} -v';
@@ -72,13 +32,12 @@ describe('QuickCommandDetector Module - 快捷命令检测模块测试', () => {
 
         it('验证纯文本命令被包含', () => {
             const commands = [
-                { name: '构建', executeCommand: 'npm run build', selectable: false },
-                { name: '测试', executeCommand: 'pytest tests/', selectable: false },
-                { name: '运行', executeCommand: 'pytest {filePath}', selectable: true }
+                { name: '构建', executeCommand: 'npm run build' },
+                { name: '测试', executeCommand: 'pytest tests/' },
+                { name: '运行', executeCommand: 'pytest {filePath}' }
             ];
 
             const quickCommands = commands.filter(cmd => {
-                if (cmd.selectable === true) return false;
                 if (/\{(\w+)\}/.test(cmd.executeCommand)) return false;
                 return true;
             });
@@ -126,17 +85,16 @@ describe('QuickCommandDetector Module - 快捷命令检测模块测试', () => {
     });
 
     describe('综合过滤逻辑', () => {
-        it('验证完整过滤流程 - selectable和变量同时检测', () => {
+        it('验证完整过滤流程 - 仅变量检测', () => {
             const commands = [
-                { name: '运行测试', executeCommand: 'pytest {filePath}', selectable: true },
-                { name: '构建', executeCommand: 'npm run build', selectable: false },
-                { name: '部署', executeCommand: 'deploy {env}', selectable: false },
-                { name: '清理', executeCommand: 'rm -rf cache', selectable: undefined },
-                { name: '重启', executeCommand: 'systemctl restart app', selectable: false }
+                { name: '运行测试', executeCommand: 'pytest {filePath}' },
+                { name: '构建', executeCommand: 'npm run build' },
+                { name: '部署', executeCommand: 'deploy {env}' },
+                { name: '清理', executeCommand: 'rm -rf cache' },
+                { name: '重启', executeCommand: 'systemctl restart app' }
             ];
 
             const quickCommands = commands.filter(cmd => {
-                if (cmd.selectable === true) return false;
                 if (/\{(\w+)\}/.test(cmd.executeCommand)) return false;
                 return true;
             });
@@ -150,7 +108,6 @@ describe('QuickCommandDetector Module - 快捷命令检测模块测试', () => {
         it('验证空命令列表处理', () => {
             const commands: any[] = [];
             const quickCommands = commands.filter(cmd => {
-                if (cmd.selectable === true) return false;
                 if (/\{(\w+)\}/.test(cmd.executeCommand)) return false;
                 return true;
             });
@@ -160,12 +117,11 @@ describe('QuickCommandDetector Module - 快捷命令检测模块测试', () => {
 
         it('验证所有命令都被过滤的情况', () => {
             const commands = [
-                { name: '测试1', executeCommand: 'pytest {filePath}', selectable: true },
-                { name: '测试2', executeCommand: 'npm run {script}', selectable: false }
+                { name: '测试1', executeCommand: 'pytest {filePath}' },
+                { name: '测试2', executeCommand: 'npm run {script}' }
             ];
 
             const quickCommands = commands.filter(cmd => {
-                if (cmd.selectable === true) return false;
                 if (/\{(\w+)\}/.test(cmd.executeCommand)) return false;
                 return true;
             });
@@ -174,31 +130,30 @@ describe('QuickCommandDetector Module - 快捷命令检测模块测试', () => {
         });
     });
 
-    describe('selectable命令用途 - 右键菜单选择', () => {
-        it('验证selectable命令用于右键菜单', () => {
+    describe('runnable命令用途 - 运行用例过滤', () => {
+        it('验证runnable为true的命令在运行用例时可用', () => {
             const commands = [
-                { name: '运行测试', executeCommand: 'pytest {filePath}', selectable: true },
-                { name: '运行覆盖率', executeCommand: 'pytest {filePath} --cov', selectable: true },
-                { name: '构建', executeCommand: 'npm run build', selectable: false }
+                { name: '运行测试', executeCommand: 'pytest {filePath}', runnable: true },
+                { name: '运行覆盖率', executeCommand: 'pytest {filePath} --cov', runnable: true },
+                { name: '构建', executeCommand: 'npm run build' }
             ];
 
-            const selectableCommands = commands.filter(cmd => cmd.selectable === true);
+            const runnableCommands = commands.filter(cmd => cmd.runnable === true);
             
-            assert.strictEqual(selectableCommands.length, 2);
-            assert.ok(selectableCommands.every(cmd => /\{(\w+)\}/.test(cmd.executeCommand)));
+            assert.strictEqual(runnableCommands.length, 2);
         });
 
-        it('验证selectable命令包含变量', () => {
-            const selectableCommand = {
-                name: '运行测试',
-                executeCommand: 'pytest {filePath} -v',
-                selectable: true
-            };
+        it('验证runnable为false或未配置的命令不可用', () => {
+            const commands = [
+                { name: '运行测试', executeCommand: 'pytest {filePath}', runnable: true },
+                { name: '构建', executeCommand: 'npm run build', runnable: false },
+                { name: '清理', executeCommand: 'rm -rf cache' }
+            ];
 
-            const hasVariable = /\{(\w+)\}/.test(selectableCommand.executeCommand);
+            const runnableCommands = commands.filter(cmd => cmd.runnable === true);
             
-            assert.strictEqual(hasVariable, true);
-            assert.strictEqual(selectableCommand.selectable, true);
+            assert.strictEqual(runnableCommands.length, 1);
+            assert.strictEqual(runnableCommands[0].name, '运行测试');
         });
     });
 });

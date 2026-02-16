@@ -202,8 +202,8 @@ export function validateConfig(config: any): ConfigValidationResult {
                     errors.push(`工程 "${project.name || i + 1}" 的命令 "${cmd.name || j + 1}" 缺少 executeCommand 字段`);
                 }
 
-                if (cmd.selectable !== undefined && typeof cmd.selectable !== 'boolean') {
-                    errors.push(`工程 "${project.name || i + 1}" 的命令 "${cmd.name || j + 1}" 的 selectable 字段必须是布尔值，当前类型为 "${typeof cmd.selectable}"`);
+                if (cmd.runnable !== undefined && typeof cmd.runnable !== 'boolean') {
+                    errors.push(`工程 "${project.name || i + 1}" 的命令 "${cmd.name || j + 1}" 的 runnable 字段必须是布尔值，当前类型为 "${typeof cmd.runnable}"`);
                 }
 
                 if (cmd.includePatterns && !Array.isArray(cmd.includePatterns)) {

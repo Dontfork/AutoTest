@@ -18,7 +18,7 @@ export interface CommandConfig {
     includePatterns?: string[];
     excludePatterns?: string[];
     colorRules?: OutputColorRule[];
-    selectable?: boolean;
+    runnable?: boolean;
 }
 
 export interface CommandVariables {

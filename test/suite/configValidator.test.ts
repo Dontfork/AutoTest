@@ -705,7 +705,7 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             assert.ok(result.errors.some((e: string) => e.includes('executeCommand')));
         });
 
-        it('验证命令的selectable类型错误 - 应报错', () => {
+        it('验证命令的runnable类型错误 - 应报错', () => {
             const config: any = {
                 projects: [{
                     name: 'TestProject',
@@ -718,14 +718,14 @@ describe('Config Validator Module - 配置验证模块测试', () => {
                         remoteDirectory: '/home/user'
                     },
                     commands: [
-                        { name: 'TestCmd', executeCommand: 'echo test', selectable: 'yes' }
+                        { name: 'TestCmd', executeCommand: 'echo test', runnable: 'yes' }
                     ]
                 }]
             };
             const result = validateConfig(config);
             
             assert.strictEqual(result.isValid, false);
-            assert.ok(result.errors.some((e: string) => e.includes('selectable') && e.includes('布尔值')));
+            assert.ok(result.errors.some((e: string) => e.includes('runnable') && e.includes('布尔值')));
         });
 
         it('验证无效的IP地址格式 - 应警告', () => {
