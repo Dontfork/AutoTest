@@ -216,8 +216,8 @@ export function validateConfig(config: any): ConfigValidationResult {
             }
         }
 
-        if (!project.commands || !Array.isArray(project.commands) || project.commands.length === 0) {
-            warnings.push(`工程 "${project.name || i + 1}" 未配置命令，将使用默认命令`);
+        if (!project.commands || !Array.isArray(project.commands)) {
+            warnings.push(`工程 "${project.name || i + 1}" 未配置命令`);
         }
 
         if (project.logs) {
@@ -362,13 +362,8 @@ export function fillMissingFields(config: any, missingFields: MissingField[]): a
     }
 
     for (const project of result.projects) {
-        if (!project.commands || project.commands.length === 0) {
-            project.commands = [{
-                name: '默认命令',
-                executeCommand: 'pytest {filePath} -v',
-                includePatterns: ['error', 'failed', 'FAILED', 'Error', 'ERROR'],
-                excludePatterns: []
-            }];
+        if (!project.commands) {
+            project.commands = [];
         }
 
         if (!project.logs) {

@@ -68,7 +68,7 @@ interface ProjectConfig {
     localPath?: string;
     enabled?: boolean;
     server: ServerConfig;
-    commands: CommandConfig[];
+    commands?: CommandConfig[];
     logs?: {
         directories: LogDirectoryConfig[];
         downloadPath: string;
@@ -775,6 +775,28 @@ describe('Types Module - 类型定义模块测试', () => {
             };
             
             assert.strictEqual(project.logs, undefined);
+        });
+
+        it('验证 commands 可选 - 仅日志监控工程', () => {
+            const project: ProjectConfig = {
+                name: '仅日志监控工程',
+                server: {
+                    host: '192.168.1.100',
+                    port: 22,
+                    username: 'root',
+                    password: 'password',
+                    privateKeyPath: '',
+                    localProjectPath: '',
+                },
+                logs: {
+                    directories: [{ name: '应用日志', path: '/var/log/app' }],
+                    downloadPath: 'D:\\downloads'
+                }
+            };
+            
+            assert.strictEqual(project.commands, undefined);
+            assert.strictEqual(project.localPath, undefined);
+            assert.ok(project.logs);
         });
     });
 

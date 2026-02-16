@@ -64,7 +64,7 @@ export interface ProjectConfig {
     localPath?: string;
     enabled?: boolean;
     server: ServerConfig;
-    commands: CommandConfig[];
+    commands?: CommandConfig[];
     logs?: ProjectLogsConfig;
 }
 

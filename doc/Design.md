@@ -115,7 +115,7 @@ interface ProjectConfig {
     localPath?: string;         // 本地工程路径（可选，用于路径匹配）
     enabled?: boolean;          // 是否启用（默认 true）
     server: ServerConfig;       // 服务器连接配置
-    commands: CommandConfig[];  // 命令配置数组（支持多个命令）
+    commands?: CommandConfig[]; // 命令配置数组（可选，未配置时快捷命令和运行用例不可用）
     logs?: ProjectLogsConfig;   // 日志配置（可选）
 }
 ```
@@ -294,11 +294,11 @@ interface ProjectConfig {
 | 字段 | 说明 |
 |------|------|
 | name | 工程名称，用于界面显示和日志标识 |
-| localPath | 本地工程路径，**可选**，用于路径匹配。未配置时仅支持执行快捷命令 |
+| localPath | 本地工程路径，**可选**，用于路径匹配 |
 | enabled | 是否启用该工程配置，默认 true |
 | server | 该工程对应的服务器配置 |
-| commands | 该工程支持的命令列表 |
-| logs | 该工程的日志配置（可选） |
+| commands | 该工程支持的命令列表，**可选**，未配置时快捷命令和运行用例不可用 |
+| logs | 该工程的日志配置，**可选**，不依赖 localPath |
 
 **localPath 配置说明**:
 - 当 `localPath` 未配置或为空时：
@@ -310,7 +310,16 @@ interface ProjectConfig {
   - 无变量命令：正常执行
   - 包含 `{filePath}`、`{fileName}`、`{fileDir}`、`{localPath}`、`{localDir}`、`{localFileName}` 变量的命令：不可用
   - 包含 `{remoteDir}` 变量的命令：需要 `remoteDirectory` 配置
-- 日志监控功能不依赖 `localPath`，只要配置了 `logs.directories` 即可使用
+
+**commands 配置说明**:
+- 当 `commands` 未配置或为空时：
+  - 快捷命令不可用
+  - 运行用例不可用
+- 工程可仅配置 `logs` 用于日志监控，无需配置 `commands`
+
+**logs 配置说明**:
+- 日志监控功能不依赖 `localPath` 或 `commands`
+- 只要配置了 `logs.directories` 和服务器信息即可使用
 
 #### 服务器配置 (ServerConfig)
 

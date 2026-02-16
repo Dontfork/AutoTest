@@ -76,6 +76,11 @@ export class FileUploader {
             return;
         }
 
+        if (!project.commands || project.commands.length === 0) {
+            vscode.window.showWarningMessage('该工程未配置命令');
+            return;
+        }
+
         const availableCommands = project.commands.filter(cmd => cmd.selectable === undefined);
         
         if (availableCommands.length === 0) {
