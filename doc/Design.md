@@ -301,11 +301,16 @@ interface ProjectConfig {
 | logs | 该工程的日志配置（可选） |
 
 **localPath 配置说明**:
-- 当 `localPath` 未配置或为空时，该工程仅支持执行快捷命令
-- 快捷命令中使用的变量会受到限制：
+- 当 `localPath` 未配置或为空时：
+  - Git 变更监控不可用
+  - 文件上传不可用
+  - 运行用例不可用
+  - 快捷命令中使用的变量会受到限制
+- 快捷命令变量限制：
   - 无变量命令：正常执行
   - 包含 `{filePath}`、`{fileName}`、`{fileDir}`、`{localPath}`、`{localDir}`、`{localFileName}` 变量的命令：不可用
   - 包含 `{remoteDir}` 变量的命令：需要 `remoteDirectory` 配置
+- 日志监控功能不依赖 `localPath`，只要配置了 `logs.directories` 即可使用
 
 #### 服务器配置 (ServerConfig)
 
