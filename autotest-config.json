@@ -1,24 +1,83 @@
 {
-  "server": {
-    "host": "192.168.1.100",
-    "port": 22,
-    "username": "root",
-    "password": "",
-    "privateKeyPath": "",
-    "localProjectPath": "",
-    "remoteDirectory": "/tmp/autotest"
-  },
-  "command": {
-    "executeCommand": "pytest {filePath} -v",
-    "filterPatterns": [
-      "error",
-      "failed",
-      "FAILED",
-      "Error",
-      "ERROR"
-    ],
-    "filterMode": "include"
-  },
+  "projects": [
+    {
+      "name": "项目A",
+      "localPath": "D:\\projectA",
+      "enabled": true,
+      "server": {
+        "host": "192.168.1.100",
+        "port": 22,
+        "username": "root",
+        "password": "",
+        "privateKeyPath": "",
+        "remoteDirectory": "/tmp/projectA"
+      },
+      "commands": [
+        {
+          "name": "运行测试",
+          "executeCommand": "pytest {filePath} -v",
+          "selectable": true,
+          "includePatterns": ["error", "failed", "FAILED", "Error", "ERROR", "PASSED", "passed"]
+        },
+        {
+          "name": "运行覆盖率",
+          "executeCommand": "pytest {filePath} --cov",
+          "selectable": true,
+          "includePatterns": ["error", "failed", "%"]
+        },
+        {
+          "name": "构建项目",
+          "executeCommand": "npm run build",
+          "selectable": false
+        },
+        {
+          "name": "部署服务",
+          "executeCommand": "systemctl restart myapp"
+        }
+      ],
+      "logs": {
+        "directories": [
+          { "name": "应用日志", "path": "/var/log/projectA/app" },
+          { "name": "测试日志", "path": "/var/log/projectA/test" }
+        ],
+        "downloadPath": "D:\\downloads\\projectA"
+      }
+    },
+    {
+      "name": "项目B",
+      "localPath": "D:\\projectB",
+      "enabled": true,
+      "server": {
+        "host": "192.168.1.200",
+        "port": 22,
+        "username": "test",
+        "password": "",
+        "privateKeyPath": "C:\\Users\\test\\.ssh\\id_rsa",
+        "remoteDirectory": "/home/test/projectB"
+      },
+      "commands": [
+        {
+          "name": "执行用例",
+          "executeCommand": "python {filePath}",
+          "selectable": true,
+          "includePatterns": ["error", "failed", "Error", "OK", "ok"],
+          "excludePatterns": ["traceback", "File"]
+        },
+        {
+          "name": "清理缓存",
+          "executeCommand": "rm -rf /tmp/cache",
+          "selectable": false
+        }
+      ],
+      "logs": {
+        "directories": [
+          { "name": "应用日志", "path": "/var/log/projectB/app" },
+          { "name": "测试日志", "path": "/var/log/projectB/test" }
+        ],
+        "downloadPath": "D:\\downloads\\projectB"
+      }
+    }
+  ],
   "ai": {
     "provider": "qwen",
     "qwen": {
@@ -32,12 +91,5 @@
       "model": "gpt-3.5-turbo"
     }
   },
-  "logs": {
-    "directories": [
-      { "name": "应用日志", "path": "/var/logs" },
-      { "name": "测试日志", "path": "/var/log/autotest" }
-    ],
-    "downloadPath": "D:\\downloads",
-    "refreshInterval": 5000
-  }
+  "refreshInterval": 0
 }

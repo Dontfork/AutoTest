@@ -1,14 +1,17 @@
 import * as vscode from 'vscode';
 import { loadConfig, reloadConfig, setupConfigWatcher, onConfigChanged, dispose as disposeConfig } from './config';
 import { CommandExecutor, FileUploader } from './core';
+import { ConnectionPool } from './core/connectionPool';
 import { AIChat, SessionManager } from './ai';
-import { LogTreeView, LogTreeItem, AIChatViewProvider } from './views';
+import { LogTreeView, LogTreeItem, AIChatViewProvider, ChangesTreeView, ChangeTreeItem, QuickCommandsTreeView, QuickCommandItem } from './views';
 
 let commandExecutor: CommandExecutor;
 let fileUploader: FileUploader;
 let aiChat: AIChat;
 let sessionManager: SessionManager;
 let logTreeView: LogTreeView;
+let changesTreeView: ChangesTreeView;
+let quickCommandsTreeView: QuickCommandsTreeView;
 
 export function activate(context: vscode.ExtensionContext) {
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -23,6 +26,8 @@ export function activate(context: vscode.ExtensionContext) {
     sessionManager = new SessionManager(context);
     aiChat = new AIChat(sessionManager);
     logTreeView = new LogTreeView();
+    changesTreeView = new ChangesTreeView(fileUploader);
+    quickCommandsTreeView = new QuickCommandsTreeView();
 
     fileUploader.setOnTestCaseComplete(() => {
         logTreeView.refresh();
@@ -33,6 +38,12 @@ export function activate(context: vscode.ExtensionContext) {
     onConfigChanged((newConfig) => {
         if (logTreeView) {
             logTreeView.refresh();
+        }
+        if (changesTreeView) {
+            changesTreeView.refresh();
+        }
+        if (quickCommandsTreeView) {
+            quickCommandsTreeView.refresh();
         }
     });
 
@@ -68,6 +79,23 @@ export function activate(context: vscode.ExtensionContext) {
                 await fileUploader.uploadFile(uri.fsPath);
             } catch (error: any) {
                 vscode.window.showErrorMessage(`上传失败: ${error.message}`);
+            }
+        }),
+
+        vscode.commands.registerCommand('autotest.syncFile', async (uri: vscode.Uri) => {
+            try {
+                if (!uri) {
+                    const activeEditor = vscode.window.activeTextEditor;
+                    if (activeEditor) {
+                        uri = activeEditor.document.uri;
+                    } else {
+                        vscode.window.showWarningMessage('请先选择一个文件或目录');
+                        return;
+                    }
+                }
+                await fileUploader.syncFile(uri.fsPath);
+            } catch (error: any) {
+                vscode.window.showErrorMessage(`同步失败: ${error.message}`);
             }
         }),
 
@@ -117,6 +145,30 @@ export function activate(context: vscode.ExtensionContext) {
             } else {
                 vscode.window.showWarningMessage('无法打开配置文件：未找到工作区');
             }
+        }),
+
+        vscode.commands.registerCommand('autotest.refreshChanges', async () => {
+            changesTreeView.refresh();
+        }),
+
+        vscode.commands.registerCommand('autotest.uploadProjectChanges', async (item: ChangeTreeItem) => {
+            await changesTreeView.uploadProjectChanges(item);
+        }),
+
+        vscode.commands.registerCommand('autotest.uploadSelectedChange', async (item: ChangeTreeItem) => {
+            await changesTreeView.uploadSelectedChange(item);
+        }),
+
+        vscode.commands.registerCommand('autotest.openChangeFile', async (item: ChangeTreeItem) => {
+            await changesTreeView.openChangeFile(item);
+        }),
+
+        vscode.commands.registerCommand('autotest.refreshQuickCommands', async () => {
+            quickCommandsTreeView.refresh();
+        }),
+
+        vscode.commands.registerCommand('autotest.executeQuickCommand', async (item: QuickCommandItem) => {
+            await quickCommandsTreeView.executeQuickCommand(item);
         })
     ];
 
@@ -142,5 +194,6 @@ export function deactivate() {
     if (sessionManager) {
         sessionManager.dispose();
     }
+    ConnectionPool.getInstance().destroy();
     disposeConfig();
 }

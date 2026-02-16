@@ -33,6 +33,14 @@
       ],
       "explorer": [
         {
+          "id": "autotestQuickCommands",
+          "name": "快捷命令"
+        },
+        {
+          "id": "autotestChanges",
+          "name": "修改监控"
+        },
+        {
           "id": "autotestLogs",
           "name": "日志监控"
         }
@@ -41,11 +49,15 @@
     "commands": [
       {
         "command": "autotest.runTestCase",
-        "title": "AutoTest: 运行用例"
+        "title": "AutoTest: 运行"
       },
       {
         "command": "autotest.uploadFile",
         "title": "AutoTest: 上传文件"
+      },
+      {
+        "command": "autotest.syncFile",
+        "title": "AutoTest: 同步文件"
       },
       {
         "command": "autotest.refreshLogs",
@@ -69,10 +81,43 @@
         "command": "autotest.openConfig",
         "title": "AutoTest: 打开配置文件",
         "icon": "$(gear)"
+      },
+      {
+        "command": "autotest.refreshChanges",
+        "title": "AutoTest: 刷新变更列表",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "autotest.uploadProjectChanges",
+        "title": "上传此项目所有变更",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "autotest.uploadSelectedChange",
+        "title": "上传此文件"
+      },
+      {
+        "command": "autotest.openChangeFile",
+        "title": "打开文件"
+      },
+      {
+        "command": "autotest.refreshQuickCommands",
+        "title": "AutoTest: 刷新快捷命令",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "autotest.executeQuickCommand",
+        "title": "执行命令",
+        "icon": "$(play)"
       }
     ],
     "menus": {
       "view/title": [
+        {
+          "command": "autotest.refreshQuickCommands",
+          "when": "view == autotestQuickCommands",
+          "group": "navigation@1"
+        },
         {
           "command": "autotest.refreshLogs",
           "when": "view == autotestLogs",
@@ -87,9 +132,19 @@
           "command": "autotest.openConfig",
           "when": "view == autotestLogs",
           "group": "navigation@3"
+        },
+        {
+          "command": "autotest.refreshChanges",
+          "when": "view == autotestChanges",
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
+        {
+          "command": "autotest.executeQuickCommand",
+          "when": "view == autotestQuickCommands && viewItem == quickCommand",
+          "group": "inline@1"
+        },
         {
           "command": "autotest.downloadLog",
           "when": "view == autotestLogs && viewItem == logFile",
@@ -99,18 +154,35 @@
           "command": "autotest.openLog",
           "when": "view == autotestLogs && viewItem == logFile",
           "group": "inline@2"
+        },
+        {
+          "command": "autotest.uploadProjectChanges",
+          "when": "view == autotestChanges && viewItem == changeGroup",
+          "group": "inline@1"
+        },
+        {
+          "command": "autotest.uploadSelectedChange",
+          "when": "view == autotestChanges && viewItem == change",
+          "group": "inline@1"
+        },
+        {
+          "command": "autotest.openChangeFile",
+          "when": "view == autotestChanges && viewItem == change",
+          "group": "inline@2"
         }
       ],
       "explorer/context": [
         {
           "command": "autotest.runTestCase",
-          "group": "autotest@1",
-          "when": "!explorerResourceIsFolder || explorerResourceIsFolder"
+          "group": "autotest@1"
         },
         {
           "command": "autotest.uploadFile",
-          "group": "autotest@2",
-          "when": "!explorerResourceIsFolder || explorerResourceIsFolder"
+          "group": "autotest@2"
+        },
+        {
+          "command": "autotest.syncFile",
+          "group": "autotest@3"
         }
       ]
     },

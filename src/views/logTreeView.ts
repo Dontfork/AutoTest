@@ -1,29 +1,38 @@
 import * as vscode from 'vscode';
 import { LogMonitor, formatSize, formatDate } from '../core';
-import { LogFile, LogDirectoryConfig } from '../types';
+import { LogFile, LogDirectoryConfig, ProjectConfig } from '../types';
+import { getEnabledProjects } from '../config';
 
 export class LogTreeItem extends vscode.TreeItem {
     public logFile: LogFile | null;
     public directoryConfig: LogDirectoryConfig | null;
+    public projectConfig: ProjectConfig | null;
 
     constructor(
         item: LogFile | LogDirectoryConfig,
         isDirectory: boolean,
-        isConfigDir: boolean = false
+        isConfigDir: boolean = false,
+        project: ProjectConfig | null = null
     ) {
         if (isConfigDir) {
             const dir = item as LogDirectoryConfig;
             super(dir.name, vscode.TreeItemCollapsibleState.Collapsed);
             this.directoryConfig = dir;
             this.logFile = null;
+            this.projectConfig = project;
             this.contextValue = 'logDirectory';
             this.iconPath = new vscode.ThemeIcon('folder');
-            this.tooltip = `路径: ${dir.path}`;
+            const projectInfo = project ? ` | 项目: ${project.name}` : '';
+            this.tooltip = `路径: ${dir.path}${projectInfo}`;
+            if (project) {
+                this.description = `[${project.name}]`;
+            }
         } else if (isDirectory) {
             const file = item as LogFile;
             super(file.name, vscode.TreeItemCollapsibleState.Collapsed);
             this.logFile = file;
             this.directoryConfig = null;
+            this.projectConfig = project;
             this.contextValue = 'logSubDirectory';
             this.iconPath = new vscode.ThemeIcon('folder');
             this.tooltip = `路径: ${file.path}`;
@@ -32,6 +41,7 @@ export class LogTreeItem extends vscode.TreeItem {
             super(file.name, vscode.TreeItemCollapsibleState.None);
             this.logFile = file;
             this.directoryConfig = null;
+            this.projectConfig = project;
             const sizeStr = formatSize(file.size);
             const dateStr = formatDate(file.modifiedTime);
             this.description = `${sizeStr}  ${dateStr}`;
@@ -71,35 +81,56 @@ export class LogsTreeProvider implements vscode.TreeDataProvider<LogTreeItem> {
             if (directories.length === 0) {
                 return [this.createMessageItem('未配置日志目录，请检查配置文件')];
             }
-            return directories.map(dir => new LogTreeItem(dir, true, true));
+            return directories.map(dir => {
+                const project = this.logMonitor.getProjectForDirectory(dir);
+                return new LogTreeItem(dir, true, true, project);
+            });
         }
 
         if (element.contextValue === 'logDirectory' && element.directoryConfig) {
-            const contents = await this.logMonitor.fetchDirectoryContents(element.directoryConfig.path);
-            this.directoryContents.set(element.directoryConfig.path, contents);
-            return this.createLogItems(contents);
+            const { files, error } = await this.logMonitor.fetchDirectoryContents(
+                element.directoryConfig.path,
+                element.projectConfig
+            );
+            this.directoryContents.set(element.directoryConfig.path, files);
+            if (error) {
+                return [this.createErrorItem(`加载失败: ${error}`)];
+            }
+            if (files.length === 0) {
+                return [this.createMessageItem('目录为空')];
+            }
+            return files.map(item => new LogTreeItem(item, item.isDirectory, false, element.projectConfig));
         }
 
         if (element.contextValue === 'logSubDirectory' && element.logFile) {
-            const contents = await this.logMonitor.fetchDirectoryContents(element.logFile.path);
-            this.directoryContents.set(element.logFile.path, contents);
-            return this.createLogItems(contents);
+            const { files, error } = await this.logMonitor.fetchDirectoryContents(
+                element.logFile.path,
+                element.projectConfig
+            );
+            this.directoryContents.set(element.logFile.path, files);
+            if (error) {
+                return [this.createErrorItem(`加载失败: ${error}`)];
+            }
+            if (files.length === 0) {
+                return [this.createMessageItem('目录为空')];
+            }
+            return files.map(item => new LogTreeItem(item, item.isDirectory, false, element.projectConfig));
         }
 
         return [];
-    }
-
-    private createLogItems(items: LogFile[]): LogTreeItem[] {
-        if (items.length === 0) {
-            return [this.createMessageItem('目录为空')];
-        }
-        return items.map(item => new LogTreeItem(item, item.isDirectory, false));
     }
 
     private createMessageItem(message: string): LogTreeItem {
         const item = new vscode.TreeItem(message, vscode.TreeItemCollapsibleState.None);
         item.iconPath = new vscode.ThemeIcon('info');
         item.contextValue = 'message';
+        return item as LogTreeItem;
+    }
+
+    private createErrorItem(message: string): LogTreeItem {
+        const item = new vscode.TreeItem(message, vscode.TreeItemCollapsibleState.None);
+        item.iconPath = new vscode.ThemeIcon('error');
+        item.contextValue = 'error';
         return item as LogTreeItem;
     }
 
@@ -148,7 +179,7 @@ export class LogTreeView {
         }
 
         try {
-            await this.logMonitor.downloadLogWithProgress(item.logFile);
+            await this.logMonitor.downloadLogWithProgress(item.logFile, item.projectConfig);
         } catch (error: any) {
             vscode.window.showErrorMessage(`下载失败: ${error.message}`);
         }
@@ -160,7 +191,7 @@ export class LogTreeView {
         }
 
         try {
-            const localPath = await this.logMonitor.downloadLog(item.logFile);
+            const localPath = await this.logMonitor.downloadLog(item.logFile, item.projectConfig);
             const document = await vscode.workspace.openTextDocument(localPath);
             await vscode.window.showTextDocument(document);
         } catch (error: any) {

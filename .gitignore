@@ -2,6 +2,12 @@
 out/
 dist/
 
+# 防止编译产物混入源码目录
+src/**/*.js
+src/**/*.d.ts
+src/**/*.js.map
+src/**/*.d.ts.map
+
 # 依赖
 node_modules/
 

@@ -4,14 +4,21 @@ export interface ServerConfig {
     username: string;
     password: string;
     privateKeyPath: string;
-    localProjectPath: string;
-    remoteDirectory: string;
+    remoteDirectory?: string;
+}
+
+export interface OutputColorRule {
+    pattern: string;
+    color: 'red' | 'green' | 'yellow' | 'blue' | 'cyan' | 'magenta' | 'white' | 'gray';
 }
 
 export interface CommandConfig {
+    name: string;
     executeCommand: string;
-    filterPatterns: string[];
-    filterMode: 'include' | 'exclude';
+    includePatterns?: string[];
+    excludePatterns?: string[];
+    colorRules?: OutputColorRule[];
+    selectable?: boolean;
 }
 
 export interface CommandVariables {
@@ -47,17 +54,56 @@ export interface LogDirectoryConfig {
     path: string;
 }
 
-export interface LogsConfig {
+export interface ProjectLogsConfig {
+    directories: LogDirectoryConfig[];
+    downloadPath: string;
+}
+
+export interface ProjectConfig {
+    name: string;
+    localPath?: string;
+    enabled?: boolean;
+    server: ServerConfig;
+    commands: CommandConfig[];
+    logs?: ProjectLogsConfig;
+}
+
+export interface AutoTestConfig {
+    projects: ProjectConfig[];
+    ai: AIConfig;
+    refreshInterval?: number;
+}
+
+export interface LegacyServerConfig {
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+    privateKeyPath: string;
+    localProjectPath: string;
+    remoteDirectory: string;
+}
+
+export interface LegacyCommandConfig {
+    executeCommand: string;
+    filterPatterns: string[];
+    filterMode: 'include' | 'exclude';
+    includePatterns?: string[];
+    excludePatterns?: string[];
+}
+
+export interface LegacyLogsConfig {
     directories: LogDirectoryConfig[];
     downloadPath: string;
     refreshInterval: number;
 }
 
-export interface AutoTestConfig {
-    server: ServerConfig;
-    command: CommandConfig;
-    ai: AIConfig;
-    logs: LogsConfig;
+export interface LegacyAutoTestConfig {
+    server?: LegacyServerConfig;
+    command?: LegacyCommandConfig;
+    ai?: AIConfig;
+    logs?: LegacyLogsConfig;
+    projects?: ProjectConfig[];
 }
 
 export interface AIMessage {
@@ -84,4 +130,40 @@ export interface LogFile {
     size: number;
     modifiedTime: Date;
     isDirectory: boolean;
+}
+
+export interface ProjectMatchResult {
+    project: ProjectConfig;
+    command?: CommandConfig;
+}
+
+export type GitChangeType = 'added' | 'modified' | 'deleted' | 'renamed' | 'moved';
+
+export interface GitChange {
+    path: string;
+    relativePath: string;
+    displayPath: string;
+    type: GitChangeType;
+    project: ProjectConfig;
+    oldRelativePath?: string;
+    oldPath?: string;
+}
+
+export interface GitChangeGroup {
+    projectName: string;
+    project: ProjectConfig;
+    changes: GitChange[];
+}
+
+export interface QuickCommand {
+    name: string;
+    executeCommand: string;
+    projectName: string;
+    project: ProjectConfig;
+}
+
+export interface QuickCommandGroup {
+    projectName: string;
+    project: ProjectConfig;
+    commands: QuickCommand[];
 }

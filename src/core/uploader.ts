@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getConfig } from '../config';
+import { getConfig, matchProject, hasValidLocalPath, hasValidRemoteDirectory } from '../config';
 import { SCPClient } from './scpClient';
 import { CommandExecutor, replaceCommandVariables, buildCommandVariables } from './commandExecutor';
-import { executeRemoteCommand, filterCommandOutput } from './sshClient';
+import { executeRemoteCommand } from './sshClient';
+import { ProjectConfig, CommandConfig } from '../types';
 
 export class FileUploader {
     private commandExecutor: CommandExecutor;
@@ -22,38 +23,66 @@ export class FileUploader {
         this.onTestCaseComplete = callback;
     }
 
-    private getWorkspacePath(): string {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (workspaceFolders && workspaceFolders.length > 0) {
-            return workspaceFolders[0].uri.fsPath;
+    private calculateRemotePath(localFilePath: string, project: ProjectConfig): string {
+        if (!hasValidLocalPath(project)) {
+            throw new Error(`工程 "${project.name}" 未配置 localPath，无法进行文件上传`);
         }
-        return '';
-    }
-
-    private calculateRemotePath(localFilePath: string): string {
-        const config = getConfig();
-        const workspacePath = config.server.localProjectPath || this.getWorkspacePath();
         
-        if (!workspacePath) {
-            throw new Error('无法确定本地工程路径，请在配置中设置 localProjectPath 或打开一个工作区');
+        if (!hasValidRemoteDirectory(project)) {
+            throw new Error(`工程 "${project.name}" 未配置 remoteDirectory，无法进行文件上传`);
         }
 
         const normalizedLocalPath = path.normalize(localFilePath);
-        const normalizedWorkspacePath = path.normalize(workspacePath);
+        const normalizedProjectPath = path.normalize(project.localPath!);
 
-        if (!normalizedLocalPath.startsWith(normalizedWorkspacePath)) {
-            throw new Error(`文件路径 "${localFilePath}" 不在本地工程路径 "${workspacePath}" 内`);
+        if (normalizedLocalPath.toLowerCase() !== normalizedProjectPath.toLowerCase() &&
+            !normalizedLocalPath.toLowerCase().startsWith(normalizedProjectPath.toLowerCase() + path.sep)) {
+            throw new Error(`文件路径 "${localFilePath}" 不在工程路径 "${project.localPath}" 内`);
         }
 
-        const relativePath = path.relative(normalizedWorkspacePath, normalizedLocalPath);
+        const relativePath = path.relative(normalizedProjectPath, normalizedLocalPath);
         const posixRelativePath = relativePath.split(path.sep).join(path.posix.sep);
-        const remotePath = path.posix.join(config.server.remoteDirectory, posixRelativePath);
+        const remotePath = path.posix.join(project.server.remoteDirectory!, posixRelativePath);
 
         return remotePath;
     }
 
+    private async selectCommand(commands: CommandConfig[]): Promise<CommandConfig | undefined> {
+        if (commands.length === 1) {
+            return commands[0];
+        }
+
+        const items = commands.map(cmd => ({
+            label: cmd.name,
+            description: cmd.executeCommand,
+            command: cmd
+        }));
+
+        const selected = await vscode.window.showQuickPick(items, {
+            placeHolder: '请选择要执行的命令',
+            title: '选择执行命令'
+        });
+
+        return selected?.command;
+    }
+
     async runTestCase(localPath: string): Promise<void> {
-        const config = getConfig();
+        const project = matchProject(localPath);
+        
+        if (!project) {
+            vscode.window.showErrorMessage(
+                `未找到匹配的工程配置\n文件路径: ${localPath}\n请在配置文件中添加对应的工程配置。`
+            );
+            return;
+        }
+
+        const availableCommands = project.commands.filter(cmd => cmd.selectable === undefined);
+        
+        if (availableCommands.length === 0) {
+            vscode.window.showWarningMessage('没有可用的命令（请配置未标记selectable的命令）');
+            return;
+        }
+
         const stat = fs.statSync(localPath);
         const isDirectory = stat.isDirectory();
         const name = path.basename(localPath);
@@ -61,7 +90,7 @@ export class FileUploader {
         try {
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: 'AutoTest',
+                title: `AutoTest - ${project.name}`,
                 cancellable: false
             }, async (progress) => {
                 if (isDirectory) {
@@ -73,19 +102,31 @@ export class FileUploader {
                         return;
                     }
 
+                    const command = await this.selectCommand(availableCommands);
+                    if (!command) {
+                        vscode.window.showWarningMessage('已取消操作');
+                        return;
+                    }
+
                     progress.report({ message: `发现 ${files.length} 个文件，开始处理...` });
                     
                     for (let i = 0; i < files.length; i++) {
                         const file = files[i];
                         const fileName = path.basename(file);
                         progress.report({ message: `处理文件 (${i + 1}/${files.length}): ${fileName}` });
-                        await this.runSingleTestCase(file, config);
+                        await this.runSingleTestCase(file, project, command);
                     }
                     
                     vscode.window.showInformationMessage(`目录 ${name} 处理完成，共 ${files.length} 个文件`);
                 } else {
+                    const command = await this.selectCommand(availableCommands);
+                    if (!command) {
+                        vscode.window.showWarningMessage('已取消操作');
+                        return;
+                    }
+
                     progress.report({ message: `正在处理: ${name}` });
-                    await this.runSingleTestCase(localPath, config);
+                    await this.runSingleTestCase(localPath, project, command);
                     vscode.window.showInformationMessage(`文件 ${name} 运行完成`);
                 }
             });
@@ -103,44 +144,16 @@ export class FileUploader {
         }
     }
 
-    private async runSingleTestCase(localFilePath: string, config: ReturnType<typeof getConfig>): Promise<void> {
-        const remoteFilePath = this.calculateRemotePath(localFilePath);
-        this.pluginChannel.appendLine(`[路径映射] ${localFilePath} -> ${remoteFilePath}`);
-
-        const scpClient = new SCPClient();
-        try {
-            await scpClient.uploadFile(localFilePath, remoteFilePath);
-            this.pluginChannel.appendLine(`[上传成功] ${localFilePath} -> ${remoteFilePath}`);
-        } finally {
-            await scpClient.disconnect();
+    async runTestCaseWithCommand(localPath: string, command: CommandConfig): Promise<void> {
+        const project = matchProject(localPath);
+        
+        if (!project) {
+            vscode.window.showErrorMessage(
+                `未找到匹配的工程配置\n文件路径: ${localPath}\n请在配置文件中添加对应的工程配置。`
+            );
+            return;
         }
 
-        const variables = buildCommandVariables(
-            localFilePath,
-            remoteFilePath,
-            config.server.remoteDirectory
-        );
-        
-        const command = replaceCommandVariables(config.command.executeCommand, variables);
-        
-        this.testOutputChannel.appendLine(`[命令] ${command}`);
-        this.testOutputChannel.appendLine('─'.repeat(50));
-        
-        const result = await executeRemoteCommand(
-            command, 
-            this.testOutputChannel,
-            {
-                patterns: config.command.filterPatterns || [],
-                mode: config.command.filterMode || 'include'
-            }
-        );
-        
-        if (result.code !== 0) {
-            this.testOutputChannel.appendLine(`[警告] 命令退出码: ${result.code}`);
-        }
-    }
-
-    async uploadFile(localPath: string): Promise<void> {
         const stat = fs.statSync(localPath);
         const isDirectory = stat.isDirectory();
         const name = path.basename(localPath);
@@ -148,7 +161,106 @@ export class FileUploader {
         try {
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: 'AutoTest',
+                title: `AutoTest - ${project.name} - ${command.name}`,
+                cancellable: false
+            }, async (progress) => {
+                if (isDirectory) {
+                    progress.report({ message: `正在扫描目录: ${name}` });
+                    const files = this.getAllFiles(localPath);
+                    
+                    if (files.length === 0) {
+                        vscode.window.showWarningMessage(`目录 ${name} 中没有可上传的文件`);
+                        return;
+                    }
+
+                    progress.report({ message: `发现 ${files.length} 个文件，开始处理...` });
+                    
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        const fileName = path.basename(file);
+                        progress.report({ message: `处理文件 (${i + 1}/${files.length}): ${fileName}` });
+                        await this.runSingleTestCase(file, project, command);
+                    }
+                    
+                    vscode.window.showInformationMessage(`目录 ${name} 处理完成，共 ${files.length} 个文件`);
+                } else {
+                    progress.report({ message: `正在处理: ${name}` });
+                    await this.runSingleTestCase(localPath, project, command);
+                    vscode.window.showInformationMessage(`文件 ${name} 运行完成`);
+                }
+            });
+
+            this.testOutputChannel.show();
+            
+            if (this.onTestCaseComplete) {
+                this.onTestCaseComplete();
+            }
+        } catch (error: any) {
+            this.pluginChannel.appendLine(`[错误] ${error.message}`);
+            this.pluginChannel.show();
+            vscode.window.showErrorMessage(`操作失败: ${error.message}`);
+            throw error;
+        }
+    }
+
+    private async runSingleTestCase(
+        localFilePath: string, 
+        project: ProjectConfig, 
+        command: CommandConfig
+    ): Promise<void> {
+        const remoteFilePath = this.calculateRemotePath(localFilePath, project);
+
+        const scpClient = new SCPClient(project.server);
+        try {
+            await scpClient.uploadFile(localFilePath, remoteFilePath);
+        } finally {
+            await scpClient.disconnect();
+        }
+
+        const variables = buildCommandVariables(
+            localFilePath,
+            remoteFilePath,
+            project.server.remoteDirectory || ''
+        );
+        
+        const finalCommand = replaceCommandVariables(command.executeCommand, variables);
+        
+        this.testOutputChannel.appendLine(`[${project.name}] ${finalCommand}`);
+        
+        const result = await executeRemoteCommand(
+            finalCommand, 
+            this.testOutputChannel,
+            project.server,
+            {
+                includePatterns: command.includePatterns || [],
+                excludePatterns: command.excludePatterns || [],
+                colorRules: command.colorRules
+            }
+        );
+        
+        if (result.code !== 0) {
+            this.testOutputChannel.appendLine(`[警告] 退出码: ${result.code}`);
+        }
+    }
+
+    async uploadFile(localPath: string): Promise<void> {
+        const project = matchProject(localPath);
+        
+        if (!project) {
+            vscode.window.showErrorMessage(
+                `未找到匹配的工程配置\n文件路径: ${localPath}\n请在配置文件中添加对应的工程配置。`
+            );
+            return;
+        }
+
+        const stat = fs.statSync(localPath);
+        const isDirectory = stat.isDirectory();
+        const name = path.basename(localPath);
+
+        try {
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `AutoTest - ${project.name}`,
                 cancellable: false
             }, async (progress) => {
                 if (isDirectory) {
@@ -162,16 +274,15 @@ export class FileUploader {
 
                     progress.report({ message: `发现 ${files.length} 个文件，开始上传...` });
                     
-                    const scpClient = new SCPClient();
+                    const scpClient = new SCPClient(project.server);
                     try {
                         for (let i = 0; i < files.length; i++) {
                             const file = files[i];
                             const fileName = path.basename(file);
                             progress.report({ message: `上传文件 (${i + 1}/${files.length}): ${fileName}` });
                             
-                            const remotePath = this.calculateRemotePath(file);
+                            const remotePath = this.calculateRemotePath(file, project);
                             await scpClient.uploadFile(file, remotePath);
-                            this.pluginChannel.appendLine(`[上传成功] ${file} -> ${remotePath}`);
                         }
                     } finally {
                         await scpClient.disconnect();
@@ -181,11 +292,10 @@ export class FileUploader {
                 } else {
                     progress.report({ message: `正在上传: ${name}` });
                     
-                    const remotePath = this.calculateRemotePath(localPath);
-                    const scpClient = new SCPClient();
+                    const remotePath = this.calculateRemotePath(localPath, project);
+                    const scpClient = new SCPClient(project.server);
                     try {
                         await scpClient.uploadFile(localPath, remotePath);
-                        this.pluginChannel.appendLine(`[上传成功] ${localPath} -> ${remotePath}`);
                     } finally {
                         await scpClient.disconnect();
                     }
@@ -193,59 +303,12 @@ export class FileUploader {
                     vscode.window.showInformationMessage(`文件 ${name} 上传完成`);
                 }
             });
-
-            this.pluginChannel.show();
         } catch (error: any) {
             this.pluginChannel.appendLine(`[上传失败] ${error.message}`);
             this.pluginChannel.show();
             vscode.window.showErrorMessage(`上传失败: ${error.message}`);
             throw error;
         }
-    }
-
-    async upload(filePath: string, remotePath?: string): Promise<string> {
-        if (!fs.existsSync(filePath)) {
-            throw new Error(`文件不存在: ${filePath}`);
-        }
-
-        try {
-            const finalRemotePath = remotePath || this.calculateRemotePath(filePath);
-            
-            const scpClient = new SCPClient();
-            try {
-                await scpClient.uploadFile(filePath, finalRemotePath);
-                this.pluginChannel.appendLine(`[上传成功] ${filePath} -> ${finalRemotePath}`);
-                return finalRemotePath;
-            } finally {
-                await scpClient.disconnect();
-            }
-        } catch (error: any) {
-            this.pluginChannel.appendLine(`[上传失败] ${error.message}`);
-            throw error;
-        }
-    }
-
-    async uploadDirectory(localDirPath: string): Promise<string[]> {
-        if (!fs.existsSync(localDirPath)) {
-            throw new Error(`目录不存在: ${localDirPath}`);
-        }
-
-        const uploadedFiles: string[] = [];
-        const files = this.getAllFiles(localDirPath);
-
-        const scpClient = new SCPClient();
-        try {
-            for (const file of files) {
-                const remotePath = this.calculateRemotePath(file);
-                await scpClient.uploadFile(file, remotePath);
-                this.pluginChannel.appendLine(`[上传成功] ${file} -> ${remotePath}`);
-                uploadedFiles.push(remotePath);
-            }
-        } finally {
-            await scpClient.disconnect();
-        }
-
-        return uploadedFiles;
     }
 
     private getAllFiles(dirPath: string, filesList: string[] = []): string[] {
@@ -265,6 +328,60 @@ export class FileUploader {
         }
         
         return filesList;
+    }
+
+    async syncFile(localPath: string): Promise<void> {
+        const project = matchProject(localPath);
+        
+        if (!project) {
+            vscode.window.showErrorMessage(
+                `未找到匹配的工程配置\n文件路径: ${localPath}\n请在配置文件中添加对应的工程配置。`
+            );
+            return;
+        }
+
+        const stat = fs.statSync(localPath);
+        const isDirectory = stat.isDirectory();
+        const name = path.basename(localPath);
+
+        try {
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `AutoTest - ${project.name} - 同步文件`,
+                cancellable: false
+            }, async (progress) => {
+                const remotePath = this.calculateRemotePath(localPath, project);
+                
+                if (isDirectory) {
+                    progress.report({ message: `正在同步目录: ${name}` });
+                    
+                    const scpClient = new SCPClient(project.server);
+                    try {
+                        await scpClient.downloadDirectory(remotePath, localPath);
+                    } finally {
+                        await scpClient.disconnect();
+                    }
+                    
+                    vscode.window.showInformationMessage(`目录 ${name} 同步完成`);
+                } else {
+                    progress.report({ message: `正在同步文件: ${name}` });
+                    
+                    const scpClient = new SCPClient(project.server);
+                    try {
+                        await scpClient.downloadFile(remotePath, localPath);
+                    } finally {
+                        await scpClient.disconnect();
+                    }
+                    
+                    vscode.window.showInformationMessage(`文件 ${name} 同步完成`);
+                }
+            });
+        } catch (error: any) {
+            this.pluginChannel.appendLine(`[同步失败] ${error.message}`);
+            this.pluginChannel.show();
+            vscode.window.showErrorMessage(`同步失败: ${error.message}`);
+            throw error;
+        }
     }
 
     showOutput(): void {

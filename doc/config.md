@@ -2,7 +2,7 @@
 
 ## 1. 模块概述
 
-配置模块负责管理 AutoTest 插件的所有配置信息，包括服务器连接、命令执行、AI 服务和日志监控等配置项。模块支持自动创建默认配置文件，并提供配置加载、获取和重载功能。
+配置模块负责管理 AutoTest 插件的所有配置信息，支持多工程多环境配置，每个工程拥有独立的服务器配置、命令配置和日志配置。模块支持自动创建默认配置文件、路径冲突检测、旧配置格式转换，并提供配置加载、获取和重载功能。
 
 ## 2. 设计方案
 
@@ -20,6 +20,11 @@
 │  ┌─────────────────┐  ┌─────────────────┐                  │
 │  │  getConfig()    │  │ reloadConfig()  │                  │
 │  │  (获取配置)      │  │  (重载配置)     │                  │
+│  └─────────────────┘  └─────────────────┘                  │
+│                                                              │
+│  ┌─────────────────┐  ┌─────────────────┐                  │
+│  │checkPathConflict│  │convertLegacy    │                  │
+│  │ (路径冲突检测)   │  │Config(旧配置转换)│                  │
 │  └─────────────────┘  └─────────────────┘                  │
 ├─────────────────────────────────────────────────────────────┤
 │                      Configuration File                      │
@@ -41,6 +46,12 @@
 2. 生成包含默认值的配置文件
 3. 显示提示信息告知用户
 
+### 2.4 路径冲突检测
+
+当检测到工程路径存在包含关系时（如 `D:\project` 和 `D:\project\sub`），模块会：
+- 自动禁用范围较小的工程
+- 显示警告消息提醒用户
+
 ## 3. 类型定义
 
 ### 3.0 路径配置重要说明
@@ -49,11 +60,11 @@
 
 | 配置项 | 路径类型 | 示例 |
 |--------|----------|------|
-| `server.privateKeyPath` | 本地绝对路径 | `C:\Users\user\.ssh\id_rsa` 或 `/home/user/.ssh/id_rsa` |
-| `server.localProjectPath` | 本地绝对路径 | `D:\Projects\Test` 或 `/home/user/projects/test` |
-| `server.remoteDirectory` | 远程绝对路径 | `/tmp/autotest` 或 `/home/user/test` |
-| `logs.directories[].path` | 远程绝对路径 | `/var/log/app` 或 `/home/user/logs` |
-| `logs.downloadPath` | 本地绝对路径 | `D:\downloads` 或 `/home/user/downloads` |
+| `projects[].localPath` | 本地绝对路径 | `D:\Projects\Test` 或 `/home/user/projects/test` |
+| `projects[].server.privateKeyPath` | 本地绝对路径 | `C:\Users\user\.ssh\id_rsa` 或 `/home/user/.ssh/id_rsa` |
+| `projects[].server.remoteDirectory` | 远程绝对路径 | `/tmp/autotest` 或 `/home/user/test` |
+| `projects[].logs.directories[].path` | 远程绝对路径 | `/var/log/app` 或 `/home/user/logs` |
+| `projects[].logs.downloadPath` | 本地绝对路径 | `D:\downloads` 或 `/home/user/downloads` |
 
 **注意事项**：
 - 本地路径格式根据操作系统而定：
@@ -65,10 +76,18 @@
 
 ```typescript
 interface AutoTestConfig {
-    server: ServerConfig;      // 服务器连接配置
-    command: CommandConfig;    // 命令执行配置
-    ai: AIConfig;              // AI 服务配置
-    logs: LogsConfig;          // 日志监控配置
+    projects: ProjectConfig[];  // 多工程配置数组
+    ai: AIConfig;               // AI 服务配置（全局）
+    refreshInterval?: number;   // 日志刷新间隔（全局，毫秒），默认 0（禁用自动刷新）
+}
+
+interface ProjectConfig {
+    name: string;               // 工程名称
+    localPath: string;          // 本地工程路径（用于路径匹配）
+    enabled?: boolean;          // 是否启用，默认 true
+    server: ServerConfig;       // 服务器连接配置
+    commands: CommandConfig[];  // 命令配置数组（支持多个命令）
+    logs: ProjectLogsConfig;    // 日志配置
 }
 ```
 
@@ -81,7 +100,6 @@ interface ServerConfig {
     username: string;          // 登录用户名
     password: string;          // 登录密码（密码认证）
     privateKeyPath: string;    // 私钥路径（密钥认证，优先于密码）
-    localProjectPath: string;  // 本地工程路径（用于计算相对路径）
     remoteDirectory: string;   // 远程工作目录（上传文件的目标目录）
 }
 ```
@@ -95,7 +113,6 @@ interface ServerConfig {
 | username | string | 是 | "root" | SSH 登录用户名 |
 | password | string | 否 | "" | SSH 登录密码（密码认证） |
 | privateKeyPath | string | 否 | "" | SSH 私钥路径（密钥认证，优先于密码） |
-| localProjectPath | string | 否 | "" | 本地工程根路径，**留空则自动使用 VSCode 打开的工作区路径** |
 | remoteDirectory | string | 是 | "/tmp/autotest" | 远程工作目录，上传文件的目标目录 |
 
 **认证方式**：
@@ -110,16 +127,12 @@ interface ServerConfig {
 上传文件时，插件会自动计算本地文件的相对路径，并映射到远程目录的对应位置：
 
 ```
-本地文件: {localProjectPath}/xx/a/test.js
+本地文件: {localPath}/xx/a/test.js
 远程路径: {remoteDirectory}/xx/a/test.js
 ```
 
-**重要说明**：
-- `localProjectPath` **无需配置**，默认自动使用 VSCode 打开的工作区路径
-- 只有在需要指定不同的工程根目录时才需要手动配置此项
-
 例如：
-- VSCode 打开的工作区: `D:\Projects\Test`（自动使用）
+- 本地工程路径: `D:\Projects\Test`
 - 远程工程路径: `/home/user/test`
 - 本地文件: `D:\Projects\Test\src\utils\helper.js`
 - 上传后远程路径: `/home/user/test/src/utils/helper.js`
@@ -128,9 +141,17 @@ interface ServerConfig {
 
 ```typescript
 interface CommandConfig {
-    executeCommand: string;              // 要执行的命令（支持变量）
-    filterPatterns: string[];            // 过滤正则表达式数组
-    filterMode: 'include' | 'exclude';   // 过滤模式
+    name: string;                      // 命令名称
+    executeCommand: string;            // 要执行的命令（支持变量）
+    selectable?: boolean;              // 是否为可选命令（用于右键菜单选择）
+    includePatterns?: string[];        // 包含匹配模式（只保留匹配的行）
+    excludePatterns?: string[];        // 排除匹配模式（排除匹配的行）
+    colorRules?: OutputColorRule[];    // 颜色规则（可选，使用内置规则）
+}
+
+interface OutputColorRule {
+    pattern: string;                   // 匹配模式
+    color: 'red' | 'green' | 'yellow' | 'blue' | 'cyan' | 'magenta' | 'white' | 'gray';
 }
 ```
 
@@ -138,9 +159,24 @@ interface CommandConfig {
 
 | 字段 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| executeCommand | string | 是 | "echo 'No command configured'" | 默认执行的命令，支持变量替换 |
-| filterPatterns | string[] | 否 | [] | 正则表达式数组，用于过滤输出 |
-| filterMode | enum | 是 | "include" | include: 只保留匹配行；exclude: 排除匹配行 |
+| name | string | 是 | - | 命令名称，用于多命令选择时显示 |
+| executeCommand | string | 是 | "pytest {filePath} -v" | 执行的命令，支持变量替换 |
+| selectable | boolean | 否 | false | 是否为可选命令（用于右键菜单选择文件后执行） |
+| includePatterns | string[] | 否 | ["error", "failed", "FAILED", "Error", "ERROR"] | 只保留匹配这些模式的行 |
+| excludePatterns | string[] | 否 | [] | 排除匹配这些模式的行 |
+| colorRules | OutputColorRule[] | 否 | 内置规则 | 输出颜色规则 |
+
+**selectable 属性说明**：
+
+| selectable | 命令包含变量 | 快捷命令面板 | 右键菜单 |
+|------------|-------------|-------------|----------|
+| false 或未设置 | 否 | ✓ 显示 | ✗ 不显示 |
+| true | 是 | ✗ 不显示 | ✓ 显示（选择文件后） |
+| 任意 | 是 | ✗ 不显示 | 根据 selectable 决定 |
+
+**使用场景**：
+- `selectable: true`：用于需要选择文件后执行的命令（如运行测试），会在右键菜单中显示
+- `selectable: false` 或不设置：用于无需选择文件的快捷命令（如构建、部署），会在快捷命令面板显示
 
 **命令变量**：
 
@@ -156,14 +192,22 @@ executeCommand 支持以下变量，在执行时自动替换为对应的值：
 | `{localFileName}` | 本地文件名 | `test_example.py` |
 | `{remoteDir}` | 远程工程目录 | `/tmp/autotest` |
 
-**命令配置示例（带变量）**：
+**多命令配置示例**：
+
 ```json
 {
-    "command": {
-        "executeCommand": "pytest {filePath} -v",
-        "filterPatterns": ["error", "failed", "FAILED", "Error", "ERROR"],
-        "filterMode": "include"
-    }
+    "commands": [
+        {
+            "name": "运行测试",
+            "executeCommand": "pytest {filePath} -v",
+            "includePatterns": ["PASSED", "FAILED", "ERROR"]
+        },
+        {
+            "name": "运行覆盖率",
+            "executeCommand": "pytest {filePath} --cov",
+            "includePatterns": ["error", "failed", "%"]
+        }
+    ]
 }
 ```
 
@@ -172,40 +216,47 @@ executeCommand 支持以下变量，在执行时自动替换为对应的值：
 Python pytest:
 ```json
 {
+    "name": "运行测试",
     "executeCommand": "cd {remoteDir} && pytest {filePath} -v",
-    "filterPatterns": ["PASSED", "FAILED", "ERROR"],
-    "filterMode": "include"
+    "includePatterns": ["PASSED", "FAILED", "ERROR"]
 }
 ```
 
 JavaScript Jest:
 ```json
 {
+    "name": "运行测试",
     "executeCommand": "cd {remoteDir} && npx jest {filePath} --coverage=false",
-    "filterPatterns": ["PASS", "FAIL", "✓", "✕"],
-    "filterMode": "include"
+    "includePatterns": ["PASS", "FAIL", "✓", "✕"]
 }
 ```
 
 Java Maven:
 ```json
 {
+    "name": "运行测试",
     "executeCommand": "cd {remoteDir} && mvn test -Dtest={fileName}",
-    "filterPatterns": ["Tests run:", "FAILURE", "ERROR"],
-    "filterMode": "include"
+    "includePatterns": ["Tests run:", "FAILURE", "ERROR"]
 }
 ```
 
-**过滤模式示例**：
+**过滤规则说明**：
 
-```json
-{
-    "filterPatterns": ["\\[error\\]", "\\[warn\\]"],
-    "filterMode": "include"
-}
-```
+- `includePatterns`: 只保留匹配这些模式的行
+- `excludePatterns`: 排除匹配这些模式的行
+- 两者可以同时使用，先应用 includePatterns，再应用 excludePatterns
+- 模式使用正则表达式匹配
 
-上述配置只显示包含 `[error]` 或 `[warn]` 的输出行。
+**内置颜色规则**：
+
+插件内置了常用颜色规则，无需手动配置：
+
+| 模式 | 颜色 | 说明 |
+|------|------|------|
+| `ERROR|FAILED|FAIL|Exception|Traceback` | 红色 | 错误信息 |
+| `PASSED|SUCCESS|OK|✓|✔` | 绿色 | 成功信息 |
+| `WARNING|WARN|⚠` | 黄色 | 警告信息 |
+| `INFO|info|ℹ` | 蓝色 | 信息提示 |
 
 ### 3.4 AI 配置
 
@@ -256,12 +307,12 @@ interface OpenAIConfig {
 interface LogDirectoryConfig {
     name: string;                 // 目录显示名称
     path: string;                 // 远程目录路径
+    projectName?: string;         // 关联的项目名称（可选）
 }
 
-interface LogsConfig {
+interface ProjectLogsConfig {
     directories: LogDirectoryConfig[];  // 监控目录列表
     downloadPath: string;               // 下载路径
-    refreshInterval: number;            // 刷新间隔(毫秒)
 }
 ```
 
@@ -272,8 +323,14 @@ interface LogsConfig {
 | directories | LogDirectoryConfig[] | 是 | [] | 要监控的日志目录列表 |
 | directories[].name | string | 是 | - | 目录在界面显示的名称 |
 | directories[].path | string | 是 | - | 远程服务器上的目录路径 |
+| directories[].projectName | string | 否 | - | 关联的项目名称，用于自动获取服务器配置 |
 | downloadPath | string | 是 | "" | 日志下载保存路径（本地绝对路径） |
-| refreshInterval | number | 是 | 5000 | 自动刷新间隔，单位毫秒。设为 0 或负数禁用自动刷新 |
+
+**全局刷新配置**：
+
+| 字段 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| refreshInterval | number | 否 | 0 | 全局日志刷新间隔，单位毫秒。设为 0 禁用自动刷新 |
 
 **日志监控功能**：
 
@@ -282,8 +339,9 @@ interface LogsConfig {
 - 显示文件大小和修改时间
 - 支持展开子目录
 - 点击文件可下载到本地
-- 自动刷新：`refreshInterval > 0` 时启用，设为 0 禁用自动刷新，仅支持手动刷新
-- 执行用例完成后自动刷新日志列表
+- 自动刷新：`refreshInterval > 0` 时启用，设为 0 禁用自动刷新
+- 执行用例完成后自动刷新对应项目的日志列表
+- 项目关联：日志目录可关联项目，自动使用项目服务器配置
 
 ## 4. 功能实现
 
@@ -306,6 +364,9 @@ interface LogsConfig {
 3. 如果文件存在：
    - 读取文件内容
    - 解析 JSON
+   - 检测配置格式（新格式/旧格式）
+   - 如果是旧格式，自动转换为新格式
+   - 检测路径冲突
    - 与默认配置合并
 4. 如果文件不存在：
    - 创建 .vscode 目录
@@ -322,6 +383,28 @@ interface LogsConfig {
 - `AutoTestConfig`: 当前配置对象
 
 **注意**：如未调用 loadConfig，返回默认配置。
+
+#### getEnabledProjects(): ProjectConfig[]
+
+获取所有启用的工程配置。
+
+**返回值**：
+- `ProjectConfig[]`: 启用的工程列表
+
+#### matchProject(filePath: string): ProjectMatchResult | null
+
+根据本地文件路径匹配对应的工程配置。
+
+**参数**：
+- `filePath`: 本地文件路径
+
+**返回值**：
+- `ProjectMatchResult | null`: 匹配结果，包含工程和可选的命令配置
+
+**匹配规则**：
+1. 遍历所有启用的工程
+2. 检查文件路径是否以工程的 `localPath` 开头（忽略大小写）
+3. 选择最长匹配的工程（处理嵌套路径）
 
 #### reloadConfig(workspacePath?: string): AutoTestConfig
 
@@ -355,10 +438,8 @@ interface LogsConfig {
 ```typescript
 import { onConfigChanged } from './config';
 
-// 监听配置变化
 onConfigChanged((newConfig) => {
     console.log('配置已更新:', newConfig);
-    // 执行配置更新后的操作
 });
 ```
 
@@ -373,20 +454,7 @@ onConfigChanged((newConfig) => {
 
 ```typescript
 const defaultConfig: AutoTestConfig = {
-    server: {
-        host: "192.168.1.100",
-        port: 22,
-        username: "root",
-        password: "",
-        privateKeyPath: "",
-        localProjectPath: "",
-        remoteDirectory: "/tmp/autotest"
-    },
-    command: {
-        executeCommand: "pytest {filePath} -v",
-        filterPatterns: ["error", "failed", "FAILED", "Error", "ERROR"],
-        filterMode: "include"
-    },
+    projects: [],
     ai: {
         provider: "qwen",
         qwen: {
@@ -400,14 +468,7 @@ const defaultConfig: AutoTestConfig = {
             model: "gpt-3.5-turbo"
         }
     },
-    logs: {
-        directories: [
-            { name: "应用日志", path: "/var/logs" },
-            { name: "测试日志", path: "/var/log/autotest" }
-        ],
-        downloadPath: "D:\\downloads",
-        refreshInterval: 5000
-    }
+    refreshInterval: 0
 };
 ```
 
@@ -418,30 +479,29 @@ const defaultConfig: AutoTestConfig = {
 ```typescript
 import { loadConfig, getConfig } from './config';
 
-// 在扩展激活时加载配置
 export function activate(context: vscode.ExtensionContext) {
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (workspacePath) {
         loadConfig(workspacePath);
     }
     
-    // 获取配置
     const config = getConfig();
-    console.log('Server host:', config.server.host);
+    console.log('Projects:', config.projects.length);
 }
 ```
 
-### 5.2 重载配置
+### 5.2 匹配工程
 
 ```typescript
-import { reloadConfig } from './config';
+import { matchProject } from './config';
 
-// 用户修改配置后重载
-function onConfigChanged() {
-    const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (workspacePath) {
-        const newConfig = reloadConfig(workspacePath);
-        console.log('Config reloaded');
+function handleFileUpload(localFilePath: string) {
+    const result = matchProject(localFilePath);
+    if (result) {
+        console.log('匹配到工程:', result.project.name);
+        console.log('服务器:', result.project.server.host);
+    } else {
+        console.log('未找到匹配的工程配置');
     }
 }
 ```
@@ -450,42 +510,80 @@ function onConfigChanged() {
 
 ```json
 {
-    "server": {
-        "host": "10.0.0.1",
-        "port": 22,
-        "username": "admin",
-        "password": "your-password",
-        "privateKeyPath": "",
-        "localProjectPath": "",
-        "remoteDirectory": "/home/admin/autotest"
-    },
-    "command": {
-        "executeCommand": "pytest tests/",
-        "filterPatterns": ["FAILED", "ERROR", "\\[error\\]"],
-        "filterMode": "include"
-    },
+    "projects": [
+        {
+            "name": "项目A",
+            "localPath": "D:\\projectA",
+            "enabled": true,
+            "server": {
+                "host": "192.168.1.100",
+                "port": 22,
+                "username": "root",
+                "password": "",
+                "privateKeyPath": "",
+                "remoteDirectory": "/tmp/projectA"
+            },
+            "commands": [
+                {
+                    "name": "运行测试",
+                    "executeCommand": "pytest {filePath} -v",
+                    "includePatterns": ["PASSED", "FAILED", "ERROR"]
+                },
+                {
+                    "name": "运行覆盖率",
+                    "executeCommand": "pytest {filePath} --cov",
+                    "includePatterns": ["error", "failed", "%"]
+                }
+            ],
+            "logs": {
+                "directories": [
+                    { "name": "应用日志", "path": "/var/log/projectA" }
+                ],
+                "downloadPath": "D:\\downloads\\projectA"
+            }
+        },
+        {
+            "name": "项目B",
+            "localPath": "D:\\projectB",
+            "enabled": true,
+            "server": {
+                "host": "192.168.1.200",
+                "port": 22,
+                "username": "test",
+                "password": "",
+                "privateKeyPath": "C:\\Users\\test\\.ssh\\id_rsa",
+                "remoteDirectory": "/home/test/projectB"
+            },
+            "commands": [
+                {
+                    "name": "执行用例",
+                    "executeCommand": "python {filePath}",
+                    "includePatterns": ["error", "failed", "OK"],
+                    "excludePatterns": ["traceback", "File"]
+                }
+            ],
+            "logs": {
+                "directories": [
+                    { "name": "测试日志", "path": "/var/log/projectB" }
+                ],
+                "downloadPath": "D:\\downloads\\projectB"
+            }
+        }
+    ],
     "ai": {
-        "provider": "openai",
+        "provider": "qwen",
         "qwen": {
-            "apiKey": "",
+            "apiKey": "your-qwen-api-key",
             "apiUrl": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
-            "model": "qwen-max"
+            "model": "qwen-turbo"
         },
         "openai": {
-            "apiKey": "sk-your-api-key",
+            "apiKey": "your-openai-api-key",
             "apiUrl": "https://api.openai.com/v1/chat/completions",
-            "model": "gpt-4"
+            "model": "gpt-3.5-turbo"
         }
     },
-    "logs": {
-        "directories": [
-            { "name": "应用日志", "path": "/var/log/myapp" },
-            { "name": "测试日志", "path": "/var/log/autotest" },
-            { "name": "系统日志", "path": "/var/log/system" }
-        ],
-        "downloadPath": "D:\\logs",
-        "refreshInterval": 3000
-    }
+    "refreshInterval": 0
 }
 ```
 
@@ -497,17 +595,17 @@ function onConfigChanged() {
 | JSON 解析失败 | 使用默认配置，记录错误日志 |
 | 文件读取权限不足 | 使用默认配置，显示错误提示 |
 | 配置项缺失 | 使用默认值填充缺失项 |
+| 路径冲突 | 自动禁用冲突工程，显示警告 |
 
 ## 7. 测试覆盖
 
 配置模块测试覆盖以下场景：
 
 - 默认配置验证
-- 配置值验证
-- 配置结构验证
-- 配置值修改测试
-- AI 模型配置测试
-- 日志目录列表配置测试
-- ServerConfig 不包含 logDirectory/downloadPath 测试
+- 多工程配置验证
+- 路径匹配测试
+- 路径冲突检测测试
+- 旧配置格式转换测试
+- AI 配置验证
 
-详见测试文件：`test/suite/types.test.ts`
+详见测试文件：`test/suite/config.test.ts`、`test/suite/multiProject.test.ts`

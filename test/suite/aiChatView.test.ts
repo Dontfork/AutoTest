@@ -4,14 +4,14 @@ import * as path from 'path';
 import { describe, it } from 'mocha';
 
 function getTemplate(): string {
-    const viewPath = path.join(__dirname, '../../src/views/aiChatView.ts');
+    const viewPath = path.join(__dirname, '../../../src/views/aiChatView.ts');
     const content = fs.readFileSync(viewPath, 'utf-8');
     const match = content.match(/getHtmlContent\(\)[\s\S]*?return\s*`([\s\S]*?)`;/);
     return match ? match[1] : '';
 }
 
 function getSourceFile(): string {
-    const viewPath = path.join(__dirname, '../../src/views/aiChatView.ts');
+    const viewPath = path.join(__dirname, '../../../src/views/aiChatView.ts');
     return fs.readFileSync(viewPath, 'utf-8');
 }
 

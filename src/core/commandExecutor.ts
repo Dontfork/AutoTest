@@ -1,16 +1,18 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { getConfig } from '../config';
-import { executeRemoteCommand, filterCommandOutput } from './sshClient';
+import { executeRemoteCommand } from './sshClient';
 import { CommandConfig, CommandVariables } from '../types';
+import { getOutputChannelManager } from '../utils/outputChannel';
 
 export class CommandExecutor {
     private pluginChannel: vscode.OutputChannel;
     private testOutputChannel: vscode.OutputChannel;
 
     constructor() {
-        this.pluginChannel = vscode.window.createOutputChannel('AutoTest');
-        this.testOutputChannel = vscode.window.createOutputChannel('TestOutput');
+        const channelManager = getOutputChannelManager();
+        this.pluginChannel = channelManager.getAutoTestChannel();
+        this.testOutputChannel = channelManager.getTestOutputChannel();
     }
 
     replaceVariables(command: string, variables: CommandVariables): string {
@@ -27,16 +29,13 @@ export class CommandExecutor {
         return result;
     }
 
-    async execute(command: string, filterConfig?: Partial<CommandConfig>): Promise<string> {
-        const config = getConfig();
-        const filterPatterns = filterConfig?.filterPatterns ?? config.command.filterPatterns ?? [];
-        const filterMode = filterConfig?.filterMode ?? config.command.filterMode ?? 'include';
-
+    async execute(command: string, commandConfig?: Partial<CommandConfig>): Promise<string> {
         try {
             const result = await executeRemoteCommand(
                 command, 
                 this.testOutputChannel,
-                { patterns: filterPatterns, mode: filterMode }
+                undefined,
+                commandConfig
             );
             return result.filteredOutput;
         } catch (error: any) {
@@ -44,19 +43,6 @@ export class CommandExecutor {
             this.pluginChannel.show();
             throw error;
         }
-    }
-
-    async executeWithConfig(variables?: CommandVariables): Promise<string> {
-        const config = getConfig();
-        let command = config.command.executeCommand;
-        
-        if (variables) {
-            command = this.replaceVariables(command, variables);
-            this.pluginChannel.appendLine(`[变量替换] 原始命令: ${config.command.executeCommand}`);
-            this.pluginChannel.appendLine(`[变量替换] 替换后: ${command}`);
-        }
-        
-        return this.execute(command);
     }
 
     getPluginChannel(): vscode.OutputChannel {

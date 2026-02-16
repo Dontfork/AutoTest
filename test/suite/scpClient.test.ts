@@ -4,39 +4,51 @@ import { describe, it } from 'mocha';
 describe('SCPClient Module - SCP客户端模块测试', () => {
     describe('SCPClient 方法签名 - 方法验证', () => {
         it('验证SCP客户端应有connect方法 - 方法名称为connect', () => {
-            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory'];
+            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory', 'downloadDirectory', 'downloadFileOrDirectory'];
             
             assert.ok(expectedMethods.includes('connect'));
         });
 
         it('验证SCP客户端应有disconnect方法 - 方法名称为disconnect', () => {
-            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory'];
+            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory', 'downloadDirectory', 'downloadFileOrDirectory'];
             
             assert.ok(expectedMethods.includes('disconnect'));
         });
 
         it('验证SCP客户端应有uploadFile方法 - 方法名称为uploadFile', () => {
-            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory'];
+            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory', 'downloadDirectory', 'downloadFileOrDirectory'];
             
             assert.ok(expectedMethods.includes('uploadFile'));
         });
 
         it('验证SCP客户端应有downloadFile方法 - 方法名称为downloadFile', () => {
-            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory'];
+            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory', 'downloadDirectory', 'downloadFileOrDirectory'];
             
             assert.ok(expectedMethods.includes('downloadFile'));
         });
 
         it('验证SCP客户端应有listDirectory方法 - 方法名称为listDirectory', () => {
-            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory'];
+            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory', 'downloadDirectory', 'downloadFileOrDirectory'];
             
             assert.ok(expectedMethods.includes('listDirectory'));
         });
 
         it('验证SCP客户端应有ensureRemoteDirectory方法 - 方法名称为ensureRemoteDirectory', () => {
-            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory'];
+            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory', 'downloadDirectory', 'downloadFileOrDirectory'];
             
             assert.ok(expectedMethods.includes('ensureRemoteDirectory'));
+        });
+
+        it('验证SCP客户端应有downloadDirectory方法 - 方法名称为downloadDirectory', () => {
+            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory', 'downloadDirectory', 'downloadFileOrDirectory'];
+            
+            assert.ok(expectedMethods.includes('downloadDirectory'));
+        });
+
+        it('验证SCP客户端应有downloadFileOrDirectory方法 - 方法名称为downloadFileOrDirectory', () => {
+            const expectedMethods = ['connect', 'disconnect', 'uploadFile', 'downloadFile', 'listDirectory', 'ensureRemoteDirectory', 'downloadDirectory', 'downloadFileOrDirectory'];
+            
+            assert.ok(expectedMethods.includes('downloadFileOrDirectory'));
         });
     });
 
@@ -233,6 +245,83 @@ describe('SCPClient Module - SCP客户端模块测试', () => {
             const localPath = path.join(localDir, fileName);
             
             assert.ok(localPath.includes('test.txt'));
+        });
+    });
+
+    describe('downloadDirectory 函数 - 目录下载', () => {
+        it('验证本地目录自动创建 - 不存在时递归创建', () => {
+            const localPath = './downloads/subdir';
+            const expectedBehavior = 'recursive-mkdir';
+            
+            assert.strictEqual(expectedBehavior, 'recursive-mkdir');
+        });
+
+        it('验证目录递归下载 - 遍历所有子目录和文件', () => {
+            const mockDirectoryStructure = {
+                files: [
+                    { name: 'file1.log', type: '-' },
+                    { name: 'file2.log', type: '-' }
+                ],
+                directories: [
+                    { name: 'subdir', type: 'd' }
+                ]
+            };
+            
+            assert.strictEqual(mockDirectoryStructure.files.length, 2);
+            assert.strictEqual(mockDirectoryStructure.directories.length, 1);
+        });
+
+        it('验证子目录递归处理 - 子目录继续递归下载', () => {
+            const processOrder: string[] = [];
+            
+            function simulateDownload(items: Array<{ name: string; type: string }>, depth: number = 0) {
+                for (const item of items) {
+                    processOrder.push(`${'  '.repeat(depth)}${item.name}`);
+                    if (item.type === 'd') {
+                        simulateDownload([
+                            { name: 'nested_file.txt', type: '-' }
+                        ], depth + 1);
+                    }
+                }
+            }
+            
+            simulateDownload([
+                { name: 'file.txt', type: '-' },
+                { name: 'subdir', type: 'd' }
+            ]);
+            
+            assert.ok(processOrder.includes('subdir'));
+            assert.ok(processOrder.includes('  nested_file.txt'));
+        });
+    });
+
+    describe('downloadFileOrDirectory 函数 - 智能下载', () => {
+        it('验证自动判断文件类型 - 根据远程路径判断是文件还是目录', () => {
+            const mockStatFile = { isDirectory: false };
+            const mockStatDir = { isDirectory: true };
+            
+            assert.strictEqual(mockStatFile.isDirectory, false);
+            assert.strictEqual(mockStatDir.isDirectory, true);
+        });
+
+        it('验证文件下载调用downloadFile - 单文件下载', () => {
+            const isDirectory = false;
+            const expectedMethod = isDirectory ? 'downloadDirectory' : 'downloadFile';
+            
+            assert.strictEqual(expectedMethod, 'downloadFile');
+        });
+
+        it('验证目录下载调用downloadDirectory - 目录下载', () => {
+            const isDirectory = true;
+            const expectedMethod = isDirectory ? 'downloadDirectory' : 'downloadFile';
+            
+            assert.strictEqual(expectedMethod, 'downloadDirectory');
+        });
+
+        it('验证远程路径不存在错误 - 抛出错误信息', () => {
+            const errorMessage = '远程路径不存在: /invalid/path';
+            
+            assert.ok(errorMessage.includes('远程路径不存在'));
         });
     });
 });

@@ -2,7 +2,7 @@
 
 ## 1. 模块概述
 
-命令执行模块负责通过 SSH 在远程服务器上执行命令，捕获输出并进行过滤处理。模块支持命令变量替换，允许在命令中使用文件路径等变量，实现灵活的测试执行配置。模块使用 VSCode 的 OutputChannel 显示执行过程，支持正则表达式过滤输出内容。
+命令执行模块负责通过 SSH 在远程服务器上执行命令，捕获输出并进行过滤和着色处理。模块支持命令变量替换，允许在命令中使用文件路径等变量，实现灵活的测试执行配置。模块使用 VSCode 的 OutputChannel 显示执行过程，支持正则表达式过滤输出内容，并支持颜色渲染。
 
 ## 2. 设计方案
 
@@ -23,17 +23,24 @@
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │                   execute()                          │    │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐   │    │
-│  │  │ SSH连接   │→│ 执行命令  │→│ 过滤输出          │   │    │
+│  │  │ SSH连接   │→│ 执行命令  │→│ 过滤+着色输出     │   │    │
 │  │  └──────────┘  └──────────┘  └──────────────────┘   │    │
 │  └─────────────────────────────────────────────────────┘    │
 │                          ↓                                   │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │              OutputChannel (AutoTest)                │    │
+│  │              OutputChannel (TestOutput)              │    │
 │  │  [变量替换] 原始命令: pytest {filePath}               │    │
 │  │  [变量替换] 替换后: pytest /tmp/test.py               │    │
 │  │  [SSH连接] root@192.168.1.100:22                     │    │
 │  │  ─────────────────────────────────────────           │    │
-│  │  ... 输出内容 ...                                     │    │
+│  │  ... 彩色输出内容 ...                                 │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              OutputFilter Module                      │    │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐   │    │
+│  │  │ 过滤输出  │→│ 应用颜色  │→│ 格式化结果        │   │    │
+│  │  └──────────┘  └──────────┘  └──────────────────┘   │    │
 │  └─────────────────────────────────────────────────────┘    │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
@@ -43,6 +50,12 @@
 
 ```
 用户触发命令
+    │
+    ▼
+匹配项目配置 (matchProject)
+    │
+    ├── 获取项目服务器配置
+    ├── 获取项目命令配置
     │
     ▼
 构建命令变量 (buildCommandVariables)
@@ -67,7 +80,7 @@
     └── 替换 {remoteDir}
     │
     ▼
-execute(command, filterConfig)
+executeRemoteCommand(command, outputChannel, serverConfig, commandConfig)
     │
     ├── 获取 SSH 配置
     │
@@ -77,7 +90,9 @@ execute(command, filterConfig)
     │
     ├── 捕获 stdout/stderr
     │
-    ├── 过滤输出
+    ├── 过滤输出 (includePatterns/excludePatterns)
+    │
+    ├── 应用颜色规则 (colorRules)
     │
     ▼
 返回过滤后的输出
@@ -100,7 +115,7 @@ SSH 连接建立
     └── 执行命令
 ```
 
-### 2.4 过滤机制
+### 2.4 过滤与着色机制
 
 ```
 原始输出
@@ -111,13 +126,14 @@ SSH 连接建立
     ▼
 遍历每一行
     │
-    ├── 匹配正则表达式数组
+    ├── 应用 includePatterns (只保留匹配的行)
     │
-    ├── include 模式: 保留匹配行
-    │   exclude 模式: 排除匹配行
+    ├── 应用 excludePatterns (排除匹配的行)
+    │
+    ├── 应用 colorRules (为匹配的行添加颜色)
     │
     ▼
-合并过滤后的行
+合并处理后的行
 ```
 
 ## 3. 类型定义
@@ -126,9 +142,16 @@ SSH 连接建立
 
 ```typescript
 interface CommandConfig {
-    executeCommand: string;              // 要执行的命令（支持变量）
-    filterPatterns: string[];            // 过滤正则表达式数组
-    filterMode: 'include' | 'exclude';   // 过滤模式
+    name: string;                      // 命令名称
+    executeCommand: string;            // 要执行的命令（支持变量）
+    includePatterns?: string[];        // 包含匹配模式
+    excludePatterns?: string[];        // 排除匹配模式
+    colorRules?: OutputColorRule[];    // 颜色规则（可选）
+}
+
+interface OutputColorRule {
+    pattern: string;                   // 匹配模式
+    color: 'red' | 'green' | 'yellow' | 'blue' | 'cyan' | 'magenta' | 'white' | 'gray';
 }
 ```
 
@@ -162,8 +185,8 @@ interface CommandVariables {
 
 | 模式 | 行为 | 使用场景 |
 |------|------|----------|
-| include | 只保留匹配正则的行 | 只查看错误和失败信息 |
-| exclude | 排除匹配正则的行 | 过滤掉调试信息 |
+| includePatterns | 只保留匹配正则的行 | 只查看错误和失败信息 |
+| excludePatterns | 排除匹配正则的行 | 过滤掉调试信息 |
 
 ### 3.5 默认过滤配置
 
@@ -171,53 +194,59 @@ interface CommandVariables {
 
 ```json
 {
-    "filterPatterns": ["error", "failed", "FAILED", "Error", "ERROR"],
-    "filterMode": "include"
+    "includePatterns": ["error", "failed", "FAILED", "Error", "ERROR"]
 }
 ```
 
 **说明**：
-- 默认使用 `include` 模式，只显示包含错误或失败的行
+- 默认使用 `includePatterns`，只显示包含错误或失败的行
 - 支持正则表达式匹配（不区分大小写）
 - 如果正则表达式无效，会降级为字符串包含匹配
+
+### 3.6 内置颜色规则
+
+插件内置了常用颜色规则，无需手动配置：
+
+| 模式 | 颜色 | 说明 |
+|------|------|------|
+| `ERROR|FAILED|FAIL|Exception|Traceback` | 红色 | 错误信息 |
+| `PASSED|SUCCESS|OK|✓|✔` | 绿色 | 成功信息 |
+| `WARNING|WARN|⚠` | 黄色 | 警告信息 |
+| `INFO|info|ℹ` | 蓝色 | 信息提示 |
 
 ## 4. 功能实现
 
 ### 4.1 类结构
 
 ```typescript
-export class CommandExecutor {
-    private terminalName = 'AutoTest';
-    private outputChannel: vscode.OutputChannel;
+export class SSHClient {
+    private client: Client | null = null;
+    private connected: boolean = false;
+    private serverConfig: ServerConfig | null = null;
+
+    constructor(serverConfig?: ServerConfig);
     
-    constructor() {
-        this.outputChannel = vscode.window.createOutputChannel(this.terminalName);
-    }
-    
-    // 变量替换
-    replaceVariables(command: string, variables: CommandVariables): string;
-    
-    // 核心方法
-    async execute(command: string, filterConfig?: Partial<CommandConfig>): Promise<string>;
-    async executeWithConfig(variables?: CommandVariables): Promise<string>;
-    
-    // 输出控制
-    showOutput(): void;
-    clearOutput(): void;
-    dispose(): void;
-    
-    // 私有方法
-    private filterOutput(output: string, patterns: string[], filterMode: 'include' | 'exclude'): string;
+    async connect(): Promise<Client>;
+    async disconnect(): Promise<void>;
+    isConnected(): boolean;
+    getClient(): Client | null;
 }
 
 // 导出函数
+export async function executeRemoteCommand(
+    command: string,
+    outputChannel?: vscode.OutputChannel,
+    serverConfig?: ServerConfig,
+    commandConfig?: Partial<CommandConfig>
+): Promise<{ stdout: string; stderr: string; code: number; filteredOutput: string }>;
+
 export function replaceCommandVariables(command: string, variables: CommandVariables): string;
 export function buildCommandVariables(localFilePath: string, remoteFilePath: string, remoteDir: string): CommandVariables;
 ```
 
 ### 4.2 变量替换方法
 
-#### replaceVariables(command: string, variables: CommandVariables): string
+#### replaceCommandVariables(command: string, variables: CommandVariables): string
 
 替换命令中的变量。
 
@@ -230,7 +259,7 @@ export function buildCommandVariables(localFilePath: string, remoteFilePath: str
 
 **实现逻辑**：
 ```typescript
-replaceVariables(command: string, variables: CommandVariables): string {
+export function replaceCommandVariables(command: string, variables: CommandVariables): string {
     let result = command;
     
     result = result.replace(/{filePath}/g, variables.filePath);
@@ -257,191 +286,290 @@ replaceVariables(command: string, variables: CommandVariables): string {
 **返回值**：
 - `CommandVariables`: 变量对象
 
-**实现逻辑**：
-```typescript
-export function buildCommandVariables(
-    localFilePath: string,
-    remoteFilePath: string,
-    remoteDir: string
-): CommandVariables {
-    const localDir = path.dirname(localFilePath);
-    const localFileName = path.basename(localFilePath);
-    const remoteFileDir = path.posix.dirname(remoteFilePath);
-    
-    return {
-        filePath: remoteFilePath,
-        fileName: path.posix.basename(remoteFilePath),
-        fileDir: remoteFileDir,
-        localPath: localFilePath,
-        localDir: localDir,
-        localFileName: localFileName,
-        remoteDir: remoteDir
-    };
-}
-```
-
 ### 4.3 核心方法
 
-#### execute(command: string, filterConfig?: Partial<CommandConfig>): Promise<string>
+#### executeRemoteCommand(command: string, outputChannel?: vscode.OutputChannel, serverConfig?: ServerConfig, commandConfig?: Partial<CommandConfig>): Promise<...>
 
 执行指定命令并返回过滤后的输出。
 
 **参数**：
 - `command`: 要执行的命令字符串
-- `filterConfig`: 可选的过滤配置，可覆盖默认配置
+- `outputChannel`: 可选的输出通道（默认使用 TestOutput）
+- `serverConfig`: 服务器配置（用于多项目环境）
+- `commandConfig`: 命令配置（包含过滤和颜色规则）
 
 **返回值**：
-- `Promise<string>`: 过滤后的输出内容
+- `Promise<{ stdout: string; stderr: string; code: number; filteredOutput: string }>`: 执行结果
 
-#### executeWithConfig(variables?: CommandVariables): Promise<string>
-
-使用配置文件中的命令执行，支持变量替换。
-
-**参数**：
-- `variables`: 可选的变量对象，用于替换命令中的变量
-
-**返回值**：
-- `Promise<string>`: 过滤后的输出内容
-
-**实现**：
+**实现逻辑**：
 ```typescript
-async executeWithConfig(variables?: CommandVariables): Promise<string> {
-    const config = getConfig();
-    let command = config.command.executeCommand;
+export async function executeRemoteCommand(
+    command: string,
+    outputChannel?: vscode.OutputChannel,
+    serverConfig?: ServerConfig,
+    commandConfig?: Partial<CommandConfig>
+): Promise<{ stdout: string; stderr: string; code: number; filteredOutput: string }> {
+    const sshClient = new SSHClient(serverConfig);
     
-    if (variables) {
-        command = this.replaceVariables(command, variables);
-        this.outputChannel.appendLine(`[变量替换] 原始命令: ${config.command.executeCommand}`);
-        this.outputChannel.appendLine(`[变量替换] 替换后: ${command}`);
+    try {
+        const client = await sshClient.connect();
+        
+        return new Promise((resolve, reject) => {
+            let stdout = '';
+            let stderr = '';
+            
+            client.on('close', (code: number) => {
+                const filteredOutput = filterCommandOutput(
+                    stdout + stderr,
+                    commandConfig?.includePatterns,
+                    commandConfig?.excludePatterns
+                );
+                
+                const coloredOutput = applyColorRules(
+                    filteredOutput,
+                    getColorRules(commandConfig?.colorRules)
+                );
+                
+                if (outputChannel) {
+                    outputChannel.appendLine(coloredOutput);
+                }
+                
+                resolve({ stdout, stderr, code: code || 0, filteredOutput: coloredOutput });
+            });
+            
+            client.exec(command, (err, stream) => {
+                if (err) {
+                    reject(new Error(`命令执行失败: ${err.message}`));
+                    return;
+                }
+                
+                stream.on('data', (data: Buffer) => {
+                    stdout += data.toString();
+                });
+                
+                stream.stderr.on('data', (data: Buffer) => {
+                    stderr += data.toString();
+                });
+            });
+        });
+    } finally {
+        await sshClient.disconnect();
     }
-    
-    return this.execute(command);
 }
 ```
 
-### 4.4 过滤方法
+### 4.4 输出过滤模块
 
-#### filterOutput(output: string, patterns: string[], filterMode: 'include' | 'exclude'): string
+#### filterCommandOutput(output: string, includePatterns?: string[], excludePatterns?: string[]): string
 
 过滤输出内容。
 
 **参数**：
 - `output`: 原始输出字符串
-- `patterns`: 正则表达式数组
-- `filterMode`: 过滤模式
+- `includePatterns`: 包含匹配模式
+- `excludePatterns`: 排除匹配模式
 
 **返回值**：
 - `string`: 过滤后的输出
+
+#### applyColorRules(output: string, rules: OutputColorRule[]): string
+
+应用颜色规则到输出。
+
+**参数**：
+- `output`: 输出字符串
+- `rules`: 颜色规则数组
+
+**返回值**：
+- `string`: 带颜色代码的输出
+
+#### getColorRules(customRules?: OutputColorRule[]): OutputColorRule[]
+
+获取颜色规则（合并内置规则和自定义规则）。
+
+**参数**：
+- `customRules`: 自定义颜色规则
+
+**返回值**：
+- `OutputColorRule[]`: 合并后的颜色规则
 
 ## 5. 使用示例
 
 ### 5.1 基本使用
 
 ```typescript
-import { CommandExecutor } from './core/commandExecutor';
-
-const executor = new CommandExecutor();
+import { executeRemoteCommand } from './core/sshClient';
 
 // 执行简单命令
-const output = await executor.execute('npm test');
-console.log('Filtered output:', output);
-
-// 显示输出面板
-executor.showOutput();
+const result = await executeRemoteCommand('npm test');
+console.log('Filtered output:', result.filteredOutput);
 ```
 
 ### 5.2 使用变量替换执行测试
 
 ```typescript
-import { CommandExecutor, buildCommandVariables } from './core/commandExecutor';
+import { executeRemoteCommand, buildCommandVariables, replaceCommandVariables } from './core/sshClient';
+import { matchProject } from './config';
 
-const executor = new CommandExecutor();
+// 匹配项目配置
+const localFilePath = 'D:\\projectA\\tests\\test_example.py';
+const matchResult = matchProject(localFilePath);
 
-// 本地文件: D:\project\tests\test_example.py
-// 远程文件: /tmp/autotest/tests/test_example.py
-const variables = buildCommandVariables(
-    'D:\\project\\tests\\test_example.py',
-    '/tmp/autotest/tests/test_example.py',
-    '/tmp/autotest'
-);
-
-// 配置命令: pytest {filePath} -v
-// 替换后: pytest /tmp/autotest/tests/test_example.py -v
-const output = await executor.executeWithConfig(variables);
-```
-
-### 5.3 配置文件示例
-
-```json
-{
-    "command": {
-        "executeCommand": "pytest {filePath} -v --tb=short",
-        "filterPatterns": ["error", "failed", "FAILED", "Error", "ERROR"],
-        "filterMode": "include"
-    }
+if (matchResult) {
+    const project = matchResult.project;
+    const command = matchResult.command || project.commands[0];
+    
+    // 计算远程文件路径
+    const relativePath = path.relative(project.localPath, localFilePath);
+    const remoteFilePath = path.posix.join(project.server.remoteDirectory, relativePath.replace(/\\/g, '/'));
+    
+    // 构建变量
+    const variables = buildCommandVariables(
+        localFilePath,
+        remoteFilePath,
+        project.server.remoteDirectory
+    );
+    
+    // 替换变量
+    const finalCommand = replaceCommandVariables(command.executeCommand, variables);
+    
+    // 执行命令
+    const result = await executeRemoteCommand(
+        finalCommand,
+        undefined,
+        project.server,
+        command
+    );
 }
 ```
 
-### 5.4 常用命令配置示例
+### 5.3 多命令选择
+
+当项目配置了多个命令时，弹出选择框让用户选择：
+
+```typescript
+import { matchProject } from './config';
+import * as vscode from 'vscode';
+
+const matchResult = matchProject(localFilePath);
+
+if (matchResult && matchResult.project.commands.length > 1) {
+    // 多个命令，让用户选择
+    const selected = await vscode.window.showQuickPick(
+        matchResult.project.commands.map(cmd => ({
+            label: cmd.name,
+            description: cmd.executeCommand,
+            command: cmd
+        })),
+        { placeHolder: '选择要执行的命令' }
+    );
+    
+    if (selected) {
+        // 执行选中的命令
+        await executeCommand(selected.command, matchResult.project);
+    }
+} else if (matchResult && matchResult.project.commands.length === 1) {
+    // 单个命令，直接执行
+    await executeCommand(matchResult.project.commands[0], matchResult.project);
+}
+```
+
+### 5.4 配置文件示例
+
+```json
+{
+    "projects": [
+        {
+            "name": "项目A",
+            "localPath": "D:\\projectA",
+            "server": {
+                "host": "192.168.1.100",
+                "port": 22,
+                "username": "root",
+                "password": "",
+                "remoteDirectory": "/tmp/projectA"
+            },
+            "commands": [
+                {
+                    "name": "运行测试",
+                    "executeCommand": "pytest {filePath} -v",
+                    "includePatterns": ["PASSED", "FAILED", "ERROR"]
+                },
+                {
+                    "name": "运行覆盖率",
+                    "executeCommand": "pytest {filePath} --cov",
+                    "includePatterns": ["error", "failed", "%"]
+                }
+            ]
+        }
+    ]
+}
+```
+
+### 5.5 常用命令配置示例
 
 **Python pytest**:
 ```json
 {
+    "name": "运行测试",
     "executeCommand": "cd {remoteDir} && pytest {filePath} -v",
-    "filterPatterns": ["error", "failed", "FAILED", "Error", "ERROR"],
-    "filterMode": "include"
+    "includePatterns": ["PASSED", "FAILED", "ERROR"]
 }
 ```
 
 **JavaScript Jest**:
 ```json
 {
+    "name": "运行测试",
     "executeCommand": "cd {remoteDir} && npx jest {filePath} --coverage=false",
-    "filterPatterns": ["PASS", "FAIL", "✓", "✕"],
-    "filterMode": "include"
+    "includePatterns": ["PASS", "FAIL", "✓", "✕"]
 }
 ```
 
 **Java Maven**:
 ```json
 {
+    "name": "运行测试",
     "executeCommand": "cd {remoteDir} && mvn test -Dtest={fileName}",
-    "filterPatterns": ["Tests run:", "FAILURE", "ERROR"],
-    "filterMode": "include"
+    "includePatterns": ["Tests run:", "FAILURE", "ERROR"]
 }
 ```
 
 **Go test**:
 ```json
 {
+    "name": "运行测试",
     "executeCommand": "cd {fileDir} && go test -v",
-    "filterPatterns": ["PASS", "FAIL", "=== RUN"],
-    "filterMode": "include"
+    "includePatterns": ["PASS", "FAIL", "=== RUN"]
 }
 ```
 
-### 5.5 使用自定义过滤配置
+### 5.6 使用自定义过滤配置
 
 ```typescript
-const executor = new CommandExecutor();
-
 // 只显示包含 error 或 fail 的行
-const output = await executor.execute('npm run build', {
-    filterPatterns: ['error', 'fail', 'FAILED'],
-    filterMode: 'include'
-});
+const result = await executeRemoteCommand(
+    'npm run build',
+    undefined,
+    serverConfig,
+    {
+        includePatterns: ['error', 'fail', 'FAILED']
+    }
+);
 ```
 
-### 5.6 排除调试信息
+### 5.7 排除调试信息
 
 ```typescript
-const executor = new CommandExecutor();
-
 // 排除包含 [debug] 的行
-const output = await executor.execute('npm run dev', {
-    filterPatterns: ['\\[debug\\]', '\\[trace\\]'],
-    filterMode: 'exclude'
-});
+const result = await executeRemoteCommand(
+    'npm run dev',
+    undefined,
+    serverConfig,
+    {
+        excludePatterns: ['\\[debug\\]', '\\[trace\\]']
+    }
+);
 ```
 
 ## 6. OutputChannel 输出格式
@@ -454,21 +582,32 @@ const output = await executor.execute('npm run dev', {
 ============================= test session starts ==============================
 collected 3 items
 
-test_example.py::test_add PASSED
-test_example.py::test_subtract PASSED
-test_example.py::test_multiply FAILED
+test_example.py::test_add PASSED          (绿色)
+test_example.py::test_subtract PASSED     (绿色)
+test_example.py::test_multiply FAILED     (红色)
 
 ============================= 2 passed, 1 failed in 0.05s ======================
 ──────────────────────────────────────────────────
 [执行完成] 退出码: 0
 ```
 
-## 7. 平台兼容性
+## 7. 输出通道管理
 
-| 平台 | Shell | 参数格式 |
-|------|-------|----------|
-| Windows | powershell.exe | `-Command "命令"` |
-| Linux/macOS | bash | `-c "命令"` |
+插件使用两个独立的输出通道：
+
+| 通道名称 | 用途 |
+|----------|------|
+| AutoTest | 插件自身的日志输出 |
+| TestOutput | 测试用例执行输出 |
+
+```typescript
+// 获取输出通道
+const autoTestChannel = vscode.window.createOutputChannel('AutoTest');
+const testOutputChannel = vscode.window.createOutputChannel('TestOutput');
+
+// 执行命令时使用 TestOutput 通道
+await executeRemoteCommand(command, testOutputChannel, serverConfig, commandConfig);
+```
 
 ## 8. 错误处理
 
@@ -476,16 +615,17 @@ test_example.py::test_multiply FAILED
 |----------|----------|
 | 命令不存在 | 进程返回非零退出码，输出错误信息 |
 | 正则表达式无效 | 忽略该正则，继续处理其他正则 |
-| 工作目录不存在 | 使用当前进程目录 |
-| 进程启动失败 | 触发 error 事件，Promise reject |
 | SSH 连接失败 | 显示错误消息，记录日志 |
+| 服务器配置缺失 | 抛出异常，显示提示 |
+| 认证失败 | 显示错误消息，检查密钥/密码配置 |
 
 ## 9. 性能考虑
 
-- 使用 spawn 而非 exec，支持流式输出
+- 使用 SSH 连接池减少连接开销
 - 实时输出到 OutputChannel，避免内存堆积
 - 正则匹配使用不区分大小写模式 (`'i'` 标志)
 - 变量替换使用全局替换 (`/g` 标志)
+- 命令执行完成后自动断开 SSH 连接
 
 ## 10. 测试覆盖
 
@@ -500,7 +640,9 @@ test_example.py::test_multiply FAILED
   - 路径提取
   - 目录层级处理
 - 输出过滤功能测试
-- include/exclude 模式测试
+- includePatterns/excludePatterns 测试
 - 正则表达式匹配测试
+- 颜色规则应用测试
+- 多项目配置测试
 
-详见测试文件：`test/suite/commandExecutor.test.ts`
+详见测试文件：`test/suite/commandExecutor.test.ts`、`test/suite/multiProject.test.ts`

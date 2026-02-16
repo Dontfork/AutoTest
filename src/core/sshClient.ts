@@ -2,28 +2,50 @@ import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { Client, ConnectConfig } from 'ssh2';
 import { getConfig } from '../config';
+import { ServerConfig, CommandConfig } from '../types';
+import { 
+    filterCommandOutput, 
+    applyColorRules, 
+    getColorRules 
+} from '../utils/outputFilter';
 
 export class SSHClient {
     private client: Client | null = null;
     private connected: boolean = false;
+    private serverConfig: ServerConfig | null = null;
+
+    constructor(serverConfig?: ServerConfig) {
+        this.serverConfig = serverConfig || null;
+    }
+
+    private getServerConfig(): ServerConfig {
+        if (this.serverConfig) {
+            return this.serverConfig;
+        }
+        const config = getConfig();
+        if (config.projects && config.projects.length > 0 && config.projects[0].enabled !== false) {
+            return config.projects[0].server;
+        }
+        throw new Error('未配置服务器信息');
+    }
 
     async connect(): Promise<Client> {
         if (this.client && this.connected) {
             return this.client;
         }
 
-        const config = getConfig();
+        const serverConfig = this.getServerConfig();
         const sshConfig: ConnectConfig = {
-            host: config.server.host,
-            port: config.server.port,
-            username: config.server.username,
+            host: serverConfig.host,
+            port: serverConfig.port,
+            username: serverConfig.username,
             readyTimeout: 30000
         };
 
-        if (config.server.privateKeyPath && fs.existsSync(config.server.privateKeyPath)) {
-            sshConfig.privateKey = fs.readFileSync(config.server.privateKeyPath);
-        } else if (config.server.password) {
-            sshConfig.password = config.server.password;
+        if (serverConfig.privateKeyPath && fs.existsSync(serverConfig.privateKeyPath)) {
+            sshConfig.privateKey = fs.readFileSync(serverConfig.privateKeyPath);
+        } else if (serverConfig.password) {
+            sshConfig.password = serverConfig.password;
         } else {
             throw new Error('未配置 SSH 认证方式（密码或私钥）');
         }
@@ -66,64 +88,40 @@ export class SSHClient {
     }
 }
 
-export function filterCommandOutput(
-    output: string,
-    patterns: string[],
-    filterMode: 'include' | 'exclude'
-): string {
-    if (!patterns || patterns.length === 0) {
-        return output;
-    }
-
-    const lines = output.split('\n');
-    const filteredLines: string[] = [];
-
-    for (const line of lines) {
-        const matchesPattern = patterns.some(pattern => {
-            try {
-                const regex = new RegExp(pattern, 'i');
-                return regex.test(line);
-            } catch {
-                return line.toLowerCase().includes(pattern.toLowerCase());
-            }
-        });
-
-        if (filterMode === 'include') {
-            if (matchesPattern) {
-                filteredLines.push(line);
-            }
-        } else {
-            if (!matchesPattern) {
-                filteredLines.push(line);
-            }
-        }
-    }
-
-    return filteredLines.join('\n');
-}
-
 export async function executeRemoteCommand(
     command: string,
     outputChannel?: vscode.OutputChannel,
-    filterConfig?: { patterns: string[]; mode: 'include' | 'exclude' }
+    serverConfig?: ServerConfig,
+    commandConfig?: Partial<CommandConfig>
 ): Promise<{ stdout: string; stderr: string; code: number; filteredOutput: string }> {
-    const sshClient = new SSHClient();
+    const sshClient = new SSHClient(serverConfig);
     
     try {
         const client = await sshClient.connect();
-        const config = getConfig();
+        const finalServerConfig = serverConfig || (() => {
+            const config = getConfig();
+            if (config.projects && config.projects.length > 0 && config.projects[0].enabled !== false) {
+                return config.projects[0].server;
+            }
+            throw new Error('未配置服务器信息');
+        })();
+
+        const includePatterns = commandConfig?.includePatterns || [];
+        const excludePatterns = commandConfig?.excludePatterns || [];
+        const colorRules = getColorRules(commandConfig?.colorRules);
 
         return new Promise((resolve, reject) => {
             let stdout = '';
             let stderr = '';
             let exitCode = 0;
 
-            const fullCommand = `cd ${config.server.remoteDirectory} && ${command}`;
+            const fullCommand = `cd ${finalServerConfig.remoteDirectory} && ${command}`;
             
             if (outputChannel) {
-                outputChannel.appendLine(`[SSH] ${config.server.username}@${config.server.host}:${config.server.port}`);
-                outputChannel.appendLine(`[执行命令] ${fullCommand}`);
-                outputChannel.appendLine('─'.repeat(50));
+                outputChannel.appendLine('');
+                outputChannel.appendLine(`┌─ 执行命令 ${'─'.repeat(48)}`);
+                outputChannel.appendLine(`│ ${finalServerConfig.username}@${finalServerConfig.host}:${finalServerConfig.port}`);
+                outputChannel.appendLine(`│ ${fullCommand}`);
             }
 
             client.exec(fullCommand, (err, stream) => {
@@ -136,19 +134,20 @@ export async function executeRemoteCommand(
                     exitCode = code;
                     
                     const combinedOutput = stdout + stderr;
-                    let filteredOutput = combinedOutput;
-                    
-                    if (filterConfig && filterConfig.patterns.length > 0) {
-                        filteredOutput = filterCommandOutput(combinedOutput, filterConfig.patterns, filterConfig.mode);
-                    }
+                    const filteredOutput = filterCommandOutput(combinedOutput, includePatterns, excludePatterns);
                     
                     if (outputChannel) {
-                        outputChannel.appendLine('─'.repeat(50));
-                        if (filterConfig && filterConfig.patterns.length > 0) {
-                            outputChannel.appendLine('[过滤后输出]');
-                            outputChannel.appendLine(filteredOutput);
+                        outputChannel.appendLine(`├─ 输出 ${'─'.repeat(52)}`);
+                        
+                        const lines = filteredOutput.split('\n');
+                        for (const line of lines) {
+                            if (line.trim()) {
+                                const coloredLine = applyColorRules(line, colorRules);
+                                outputChannel.appendLine(`│ ${coloredLine}`);
+                            }
                         }
-                        outputChannel.appendLine(`[执行完成] 退出码: ${code}`);
+                        
+                        outputChannel.appendLine(`└─ 完成 (退出码: ${code}) ${'─'.repeat(42)}`);
                         outputChannel.show();
                     }
                     
@@ -172,3 +171,5 @@ export async function executeRemoteCommand(
         throw error;
     }
 }
+
+export { filterCommandOutput, applyColorRules, getColorRules } from '../utils/outputFilter';

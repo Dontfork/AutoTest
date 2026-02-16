@@ -290,6 +290,8 @@ npm run test:unit
 
 ### 历史教训
 
+#### 教训一：误删关键配置文件
+
 **事件**: 在 `add-session-management-for-ai-chat` 提交中，误删了 `.vscode/launch.json` 文件
 
 **原因**: 
@@ -301,6 +303,29 @@ npm run test:unit
 2. 避免使用 `git add -A`，推荐使用 `git add <具体文件>`
 3. 关键配置文件应加入版本控制保护
 4. 提交前必须确认暂存区内容
+
+#### 教训二：编译产物混入源码目录
+
+**事件**: `src/types/` 目录下出现了 `.js`、`.d.ts`、`.js.map`、`.d.ts.map` 等编译产物文件
+
+**原因**: 
+- 在某次操作中可能直接在 `src/types/` 目录下执行了 `tsc` 编译
+- `.gitignore` 未覆盖 `src/` 目录下的编译产物
+- 提交代码前未检查文件列表
+
+**教训**:
+1. **禁止在 `src/` 目录下直接执行 `tsc`**，应使用项目根目录的 `npm run compile`
+2. **提交前必须检查 `git status`**，确认没有意外的文件被添加
+3. **`.gitignore` 应包含防护规则**，即使误操作也不会提交编译产物：
+   ```
+   # 防止编译产物混入源码目录
+   src/**/*.js
+   src/**/*.d.ts
+   src/**/*.js.map
+   src/**/*.d.ts.map
+   ```
+4. **编译产物只应出现在 `out/` 或 `dist/` 目录**，这是 `tsconfig.json` 中 `outDir` 配置的输出目录
+5. **定期检查源码目录**，发现编译产物立即清理
 
 ## 打包发布
 

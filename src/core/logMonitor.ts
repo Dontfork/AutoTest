@@ -1,62 +1,139 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getConfig } from '../config';
-import { downloadFile, listDirectory } from './scpClient';
-import { LogFile, LogDirectoryConfig } from '../types';
+import { getConfig, getEnabledProjects, getAllLogDirectories, getRefreshInterval } from '../config';
+import { SCPClient } from './scpClient';
+import { ConnectionPool } from './connectionPool';
+import { LogFile, LogDirectoryConfig, ProjectConfig, ServerConfig } from '../types';
+import { getOutputChannelManager } from '../utils/outputChannel';
+
+function log(message: string): void {
+    const channel = getOutputChannelManager().getAutoTestChannel();
+    channel.appendLine(`[LogMonitor] ${message}`);
+}
 
 export class LogMonitor {
-    private refreshInterval: number = 5000;
     private monitorTimer: ReturnType<typeof setInterval> | null = null;
     private onLogFilesChange: ((files: Map<string, LogFile[]>) => void) | null = null;
     private logFilesCache: Map<string, LogFile[]> = new Map();
+    private loadErrors: Map<string, string> = new Map();
 
-    constructor() {
-        this.updateRefreshInterval();
-    }
-
-    private updateRefreshInterval(): void {
-        const config = getConfig();
-        this.refreshInterval = config.logs.refreshInterval;
-    }
-
-    getRefreshInterval(): number {
-        return this.refreshInterval;
-    }
+    constructor() {}
 
     isAutoRefreshEnabled(): boolean {
-        return this.refreshInterval > 0;
+        return getRefreshInterval() > 0;
     }
 
     getDirectories(): LogDirectoryConfig[] {
-        const config = getConfig();
-        return config.logs.directories || [];
+        const allDirs = getAllLogDirectories();
+        return allDirs.map(item => item.directory);
     }
 
-    async fetchDirectoryContents(dirPath: string): Promise<LogFile[]> {
+    getProjectForDirectory(dir: LogDirectoryConfig): ProjectConfig | null {
+        const allDirs = getAllLogDirectories();
+        const found = allDirs.find(item => item.directory.path === dir.path);
+        return found ? found.project : null;
+    }
+
+    getLoadError(dirPath: string): string | null {
+        return this.loadErrors.get(dirPath) || null;
+    }
+
+    private getServerConfig(project: ProjectConfig | null): ServerConfig {
+        if (project) {
+            return project.server;
+        }
+        const config = getConfig();
+        if (config.projects && config.projects.length > 0 && config.projects[0].enabled !== false) {
+            return config.projects[0].server;
+        }
+        throw new Error('未配置服务器信息');
+    }
+
+    async fetchDirectoryContents(dirPath: string, project: ProjectConfig | null = null): Promise<{ files: LogFile[]; error: string | null }> {
         try {
-            const items = await listDirectory(dirPath);
-            return items.sort((a, b) => {
-                if (a.isDirectory !== b.isDirectory) {
-                    return a.isDirectory ? -1 : 1;
-                }
-                return a.name.localeCompare(b.name);
-            });
+            const serverConfig = this.getServerConfig(project);
+            const scpClient = new SCPClient(serverConfig, true);
+            try {
+                const items = await scpClient.listDirectory(dirPath);
+                const sortedItems = items.sort((a, b) => {
+                    if (a.isDirectory !== b.isDirectory) {
+                        return a.isDirectory ? -1 : 1;
+                    }
+                    return a.name.localeCompare(b.name);
+                });
+                return { files: sortedItems, error: null };
+            } finally {
+                await scpClient.disconnect();
+            }
         } catch (error: any) {
-            return [];
+            const errorMsg = error.message || '未知错误';
+            log(`加载目录 ${dirPath} 失败: ${errorMsg}`);
+            return { files: [], error: errorMsg };
         }
     }
 
     async fetchAllDirectories(): Promise<Map<string, LogFile[]>> {
-        const directories = this.getDirectories();
+        const allDirs = getAllLogDirectories();
         const results = new Map<string, LogFile[]>();
+        this.loadErrors.clear();
 
-        for (const dir of directories) {
-            const files = await this.fetchDirectoryContents(dir.path);
-            results.set(dir.path, files);
-            this.logFilesCache.set(dir.path, files);
+        log(`开始加载 ${allDirs.length} 个日志目录`);
+
+        const dirsByServer = new Map<string, Array<{ dir: LogDirectoryConfig; project: ProjectConfig | null }>>();
+
+        for (const item of allDirs) {
+            const serverConfig = this.getServerConfig(item.project);
+            const serverKey = `${serverConfig.host}:${serverConfig.port}:${serverConfig.username}`;
+            
+            if (!dirsByServer.has(serverKey)) {
+                dirsByServer.set(serverKey, []);
+            }
+            dirsByServer.get(serverKey)!.push({
+                dir: item.directory,
+                project: item.project
+            });
         }
 
+        log(`共需连接 ${dirsByServer.size} 个服务器`);
+
+        for (const [serverKey, dirs] of dirsByServer) {
+            if (dirs.length === 0) continue;
+
+            const serverConfig = this.getServerConfig(dirs[0].project);
+            const scpClient = new SCPClient(serverConfig, true);
+
+            try {
+                for (const { dir, project } of dirs) {
+                    const projectName = project ? project.name : '未知项目';
+                    log(`加载目录: ${dir.path} (项目: ${projectName})`);
+                    
+                    try {
+                        const items = await scpClient.listDirectory(dir.path);
+                        const sortedItems = items.sort((a, b) => {
+                            if (a.isDirectory !== b.isDirectory) {
+                                return a.isDirectory ? -1 : 1;
+                            }
+                            return a.name.localeCompare(b.name);
+                        });
+                        results.set(dir.path, sortedItems);
+                        this.logFilesCache.set(dir.path, sortedItems);
+                        log(`目录 ${dir.path} 加载成功，共 ${sortedItems.length} 个文件`);
+                    } catch (error: any) {
+                        const errorMsg = error.message || '未知错误';
+                        this.loadErrors.set(dir.path, errorMsg);
+                        results.set(dir.path, []);
+                        log(`目录 ${dir.path} 加载失败: ${errorMsg}`);
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+            } finally {
+                await scpClient.disconnect();
+            }
+        }
+
+        log(`日志目录加载完成，成功: ${results.size - this.loadErrors.size}，失败: ${this.loadErrors.size}`);
         return results;
     }
 
@@ -67,26 +144,49 @@ export class LogMonitor {
             onChange(files);
         });
 
-        if (this.isAutoRefreshEnabled()) {
+        this.startAutoRefresh();
+    }
+
+    private startAutoRefresh(): void {
+        this.stopAutoRefresh();
+        
+        const interval = getRefreshInterval();
+        if (interval > 0) {
+            log(`启用自动刷新，间隔: ${interval}ms`);
             this.monitorTimer = setInterval(async () => {
                 const files = await this.fetchAllDirectories();
                 if (this.onLogFilesChange) {
                     this.onLogFilesChange(files);
                 }
-            }, this.refreshInterval);
+            }, interval);
+        } else {
+            log('自动刷新已禁用');
         }
     }
 
-    stopMonitoring(): void {
+    private stopAutoRefresh(): void {
         if (this.monitorTimer) {
             clearInterval(this.monitorTimer);
             this.monitorTimer = null;
         }
     }
 
-    async downloadLog(logFile: LogFile): Promise<string> {
-        const config = getConfig();
-        const downloadPath = config.logs.downloadPath;
+    stopMonitoring(): void {
+        this.stopAutoRefresh();
+    }
+
+    async downloadLog(logFile: LogFile, project: ProjectConfig | null = null): Promise<string> {
+        let downloadPath: string;
+        
+        if (project && project.logs) {
+            downloadPath = project.logs.downloadPath;
+        } else {
+            downloadPath = '';
+        }
+        
+        if (!downloadPath) {
+            throw new Error('未配置日志下载路径');
+        }
         
         if (!fs.existsSync(downloadPath)) {
             fs.mkdirSync(downloadPath, { recursive: true });
@@ -95,21 +195,24 @@ export class LogMonitor {
         const localPath = path.join(downloadPath, logFile.name);
 
         try {
-            await downloadFile(logFile.path, localPath);
+            const serverConfig = this.getServerConfig(project);
+            const scpClient = new SCPClient(serverConfig, true);
+            await scpClient.downloadFile(logFile.path, localPath);
+            await scpClient.disconnect();
             return localPath;
         } catch (error: any) {
             throw new Error(`下载日志失败: ${error.message}`);
         }
     }
 
-    async downloadLogWithProgress(logFile: LogFile): Promise<string> {
+    async downloadLogWithProgress(logFile: LogFile, project: ProjectConfig | null = null): Promise<string> {
         return vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: '下载日志',
             cancellable: false
         }, async (progress) => {
             progress.report({ message: `正在下载 ${logFile.name}...` });
-            const localPath = await this.downloadLog(logFile);
+            const localPath = await this.downloadLog(logFile, project);
             vscode.window.showInformationMessage(`日志已下载到: ${localPath}`);
             return localPath;
         });
@@ -117,6 +220,14 @@ export class LogMonitor {
 
     getLogFiles(dirPath: string): LogFile[] {
         return this.logFilesCache.get(dirPath) || [];
+    }
+
+    refreshAfterCommand(project: ProjectConfig): void {
+        this.fetchAllDirectories().then(files => {
+            if (this.onLogFilesChange) {
+                this.onLogFilesChange(files);
+            }
+        });
     }
 }
 

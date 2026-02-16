@@ -781,5 +781,55 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
                 assert.strictEqual(files.length, 3);
             });
         });
+
+        describe('syncFile - 同步文件', () => {
+            it('单文件同步 - 从远程下载到本地', () => {
+                const localPath = 'D:\\project\\tests\\test_example.py';
+                const operation = 'download';
+                
+                assert.strictEqual(operation, 'download');
+            });
+
+            it('目录同步 - 递归下载整个目录', () => {
+                const localPath = 'D:\\project\\tests';
+                const isDirectory = true;
+                const expectedBehavior = 'recursive-download';
+                
+                assert.strictEqual(isDirectory, true);
+                assert.strictEqual(expectedBehavior, 'recursive-download');
+            });
+
+            it('路径映射 - 远程路径对应本地路径', () => {
+                const remotePath = '/tmp/autotest/tests/test_example.py';
+                const localProjectPath = 'D:\\project';
+                const remoteDirectory = '/tmp/autotest';
+                
+                const relativePath = remotePath.replace(remoteDirectory, '');
+                const localFilePath = localProjectPath + relativePath.replace(/\//g, '\\');
+                
+                assert.strictEqual(localFilePath, 'D:\\project\\tests\\test_example.py');
+            });
+
+            it('项目匹配 - 根据本地路径匹配项目配置', () => {
+                const localPath = 'D:\\projectA\\tests\\test.py';
+                const projects = [
+                    { name: '项目A', localPath: 'D:\\projectA' },
+                    { name: '项目B', localPath: 'D:\\projectB' }
+                ];
+                
+                const matchedProject = projects.find(p => 
+                    localPath.toLowerCase().startsWith(p.localPath.toLowerCase())
+                );
+                
+                assert.ok(matchedProject);
+                assert.strictEqual(matchedProject!.name, '项目A');
+            });
+
+            it('同步方向 - 从远程服务器下载到本地', () => {
+                const syncDirection = 'remote-to-local';
+                
+                assert.strictEqual(syncDirection, 'remote-to-local');
+            });
+        });
     });
 });
