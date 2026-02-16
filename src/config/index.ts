@@ -389,14 +389,20 @@ export function reloadConfig(workspacePath?: string): AutoTestConfig {
         return getConfig();
     }
     
-    const oldConfig = config;
-    const newConfig = loadConfig(wsPath);
+    isReloadingConfig = true;
     
-    if (JSON.stringify(oldConfig) !== JSON.stringify(newConfig)) {
-        configChangeEmitter.fire(newConfig);
+    try {
+        const oldConfig = config;
+        const newConfig = loadConfig(wsPath);
+        
+        if (JSON.stringify(oldConfig) !== JSON.stringify(newConfig)) {
+            configChangeEmitter.fire(newConfig);
+        }
+        
+        return newConfig;
+    } finally {
+        isReloadingConfig = false;
     }
-    
-    return newConfig;
 }
 
 export function setupConfigWatcher(context: vscode.ExtensionContext): void {
