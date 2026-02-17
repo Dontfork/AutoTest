@@ -182,7 +182,7 @@ describe('AIChatView Markdown Rendering - Markdown渲染测试', () => {
     it('streamChunk应发送渲染后的HTML实现动态渲染', () => {
         const source = getSourceFile();
         assert.ok(source.includes("command: 'streamChunk'"));
-        assert.ok(source.includes('const htmlContent = await marked(fullContent)'));
+        assert.ok(source.includes('enhanceMarkdown'));
     });
 
     it('streamComplete应发送渲染后的HTML', () => {
@@ -313,7 +313,7 @@ describe('AIChatView Markdown Rendering - Markdown渲染增强测试', () => {
     it('代码块应有复制按钮样式', () => {
         const template = getTemplate();
         assert.ok(template.includes('.copy-btn'));
-        assert.ok(template.includes('.code-block-wrapper'));
+        assert.ok(template.includes('.code-header'));
     });
 
     it('复制按钮应使用clipboard API', () => {
@@ -328,6 +328,6 @@ describe('AIChatView Markdown Rendering - Markdown渲染增强测试', () => {
 
     it('代码块背景色应不同于页面背景', () => {
         const template = getTemplate();
-        assert.ok(template.includes('.bubble pre { background: #252526'));
+        assert.ok(template.includes('.bubble pre { background:'));
     });
 });

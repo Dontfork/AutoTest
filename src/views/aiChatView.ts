@@ -5,6 +5,33 @@ import { SessionManager } from '../ai/sessionManager';
 import { ChatSession, AIModelConfig } from '../types';
 import { onConfigChanged } from '../config';
 
+marked.setOptions({
+    gfm: true,
+    breaks: true
+});
+
+function enhanceMarkdown(html: string): string {
+    html = html.replace(/<pre><code(?: class="language-(\w+)")?>/g, (match, lang) => {
+        const langDisplay = lang ? `<span class="code-lang">${lang}</span>` : '';
+        return `<pre><div class="code-header">${langDisplay}<button class="copy-btn" title="复制代码"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div><code>`;
+    });
+    
+    html = html.replace(/<h([1-6])>/g, '<h$1 style="margin: 16px 0 8px 0; color: #e0e0e0; font-weight: 600;">');
+    html = html.replace(/<ul>/g, '<ul style="margin: 8px 0; padding-left: 24px;">');
+    html = html.replace(/<ol>/g, '<ol style="margin: 8px 0; padding-left: 24px;">');
+    html = html.replace(/<li>/g, '<li style="margin: 4px 0; line-height: 1.6;">');
+    html = html.replace(/<blockquote>/g, '<blockquote style="border-left: 3px solid #0e639c; padding: 8px 16px; margin: 12px 0; background: #252526; border-radius: 0 4px 4px 0;">');
+    html = html.replace(/<table>/g, '<table style="width: 100%; border-collapse: collapse; margin: 12px 0;">');
+    html = html.replace(/<tr>/g, '<tr style="border-bottom: 1px solid #3c3c3c;">');
+    html = html.replace(/<th>/g, '<th style="padding: 8px 12px; text-align: left;">');
+    html = html.replace(/<td>/g, '<td style="padding: 8px 12px;">');
+    html = html.replace(/<p>/g, '<p style="margin: 8px 0; line-height: 1.7;">');
+    html = html.replace(/<code>(?![^<]*<\/code><\/pre>)/g, '<code style="background: #2d2d2d; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco, monospace; font-size: 0.9em;">');
+    html = html.replace(/<a /g, '<a style="color: #3794ff; text-decoration: none;" target="_blank" ');
+    
+    return html;
+}
+
 export class AIChatViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'autotest-ai-view';
     private aiChat: AIChat;
@@ -129,7 +156,8 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         const renderedMessages = await Promise.all(
             session.messages.map(async (m) => {
                 if (m.role === 'assistant') {
-                    return { ...m, renderedContent: await marked(m.content) };
+                    const html = await marked(m.content);
+                    return { ...m, renderedContent: enhanceMarkdown(html) };
                 }
                 return m;
             })
@@ -196,7 +224,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             
             const response = await this.aiChat.sendMessageStream(data.message, data.systemPrompt, async (chunk) => {
                 fullContent += chunk;
-                const htmlContent = await marked(fullContent);
+                const htmlContent = enhanceMarkdown(await marked(fullContent));
                 this.view?.webview.postMessage({
                     command: 'streamChunk',
                     data: htmlContent
@@ -210,7 +238,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 });
             } else {
                 const markdownContent = response.content || fullContent;
-                const htmlContent = await marked(markdownContent);
+                const htmlContent = enhanceMarkdown(await marked(markdownContent));
                 this.view?.webview.postMessage({
                     command: 'streamComplete',
                     data: htmlContent
@@ -250,29 +278,24 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         .messages { flex: 1; overflow-y: auto; padding: 16px; }
         .msg { margin-bottom: 16px; display: flex; }
         .msg.user { justify-content: flex-end; }
-        .bubble { padding: 10px 14px; border-radius: 4px; max-width: 85%; line-height: 1.6; }
-        .user .bubble { background: transparent; border: 1px solid #3c3c3c; }
+        .bubble { padding: 12px 16px; border-radius: 8px; max-width: 85%; line-height: 1.7; }
+        .user .bubble { background: #2d2d2d; border: none; }
         .assistant .bubble { background: transparent; border: 1px solid #3c3c3c; }
         .error .bubble { background: transparent; border: 1px solid #5a1d1d; color: #f48771; }
-        .bubble pre { background: #252526; padding: 12px 16px; border-radius: 4px; overflow-x: auto; margin: 10px 0; border: 1px solid #3c3c3c; }
-        .bubble code { background: #252526; padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9em; }
-        .bubble pre code { background: none; padding: 0; }
-        .code-block-wrapper { position: relative; margin: 10px 0; }
-        .code-block-wrapper pre { margin: 0; }
-        .copy-btn { position: absolute; top: 8px; right: 8px; background: transparent; color: #858585; border: 1px solid #3c3c3c; border-radius: 4px; padding: 4px; cursor: pointer; opacity: 0; transition: opacity 0.2s, color 0.2s; }
-        .code-block-wrapper:hover .copy-btn { opacity: 1; }
-        .copy-btn:hover { color: #cccccc; border-color: #858585; }
+        .bubble pre { background: #1e1e1e; border-radius: 8px; overflow: hidden; margin: 12px 0; border: 1px solid #3c3c3c; }
+        .bubble pre code { display: block; padding: 12px 16px; overflow-x: auto; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 13px; line-height: 1.5; background: none; }
+        .code-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: #2d2d2d; border-bottom: 1px solid #3c3c3c; }
+        .code-lang { font-size: 11px; color: #858585; font-family: 'Consolas', 'Monaco', monospace; text-transform: uppercase; letter-spacing: 0.5px; }
+        .copy-btn { background: transparent; color: #858585; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 11px; transition: all 0.2s; }
+        .copy-btn:hover { color: #cccccc; background: #3c3c3c; }
         .copy-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.5; fill: none; }
-        .bubble h1, .bubble h2, .bubble h3 { margin: 14px 0 10px 0; color: #e0e0e0; }
-        .bubble h1 { font-size: 1.3em; }
-        .bubble h2 { font-size: 1.15em; }
-        .bubble h3 { font-size: 1em; }
-        .bubble ul, .bubble ol { margin: 10px 0; padding-left: 20px; }
-        .bubble li { margin: 4px 0; }
-        .bubble blockquote { border-left: 3px solid #0e639c; padding-left: 12px; margin: 10px 0; color: #a0a0a0; }
+        .copy-btn.copied { color: #4ec9b0; }
+        .bubble code { background: #2d2d2d; padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9em; }
         .bubble a { color: #3794ff; }
-        .bubble strong { color: #ffffff; }
+        .bubble strong { color: #ffffff; font-weight: 600; }
         .bubble em { color: #d0d0d0; }
+        .bubble hr { border: none; border-top: 1px solid #3c3c3c; margin: 16px 0; }
+        .bubble img { max-width: 100%; border-radius: 4px; }
         .input-area { padding: 10px 12px; border-top: 1px solid #3c3c3c; background: transparent; overflow: hidden; }
         .input-wrap { display: flex; gap: 8px; align-items: flex-end; overflow: hidden; }
         textarea { flex: 1; padding: 4px 0 3px 0; background: transparent; color: #cccccc; border: none; border-bottom: 1px solid #3c3c3c; resize: none; font-family: inherit; font-size: 14px; line-height: 18px; height: 25px; -webkit-appearance: none; appearance: none; overflow: hidden; }
@@ -419,32 +442,20 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         }
         
         function addCopyButtons(container) {
-            const codeBlocks = container.querySelectorAll('pre code');
-            codeBlocks.forEach((block, index) => {
-                const pre = block.parentElement;
-                if (pre && !pre.querySelector('.copy-btn')) {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'code-block-wrapper';
-                    pre.parentNode.insertBefore(wrapper, pre);
-                    wrapper.appendChild(pre);
-                    
-                    const copyBtn = document.createElement('button');
-                    copyBtn.className = 'copy-btn';
-                    copyBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
-                    copyBtn.title = '复制代码';
-                    copyBtn.onclick = function() {
-                        const code = block.textContent || '';
-                        navigator.clipboard.writeText(code).then(() => {
-                            copyBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
-                            copyBtn.title = '已复制';
-                            setTimeout(() => {
-                                copyBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
-                                copyBtn.title = '复制代码';
-                            }, 2000);
-                        });
-                    };
-                    wrapper.appendChild(copyBtn);
-                }
+            const copyBtns = container.querySelectorAll('.copy-btn');
+            copyBtns.forEach((btn) => {
+                btn.onclick = function() {
+                    const pre = btn.closest('pre');
+                    const code = pre ? (pre.querySelector('code')?.textContent || '') : '';
+                    navigator.clipboard.writeText(code).then(() => {
+                        btn.classList.add('copied');
+                        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> 已复制';
+                        setTimeout(() => {
+                            btn.classList.remove('copied');
+                            btn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
+                        }, 2000);
+                    });
+                };
             });
         }
         
