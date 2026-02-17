@@ -88,9 +88,19 @@
         "name": "gpt-4",
         "apiKey": "your-openai-api-key",
         "apiUrl": "https://api.openai.com/v1/chat/completions"
+      },
+      {
+        "name": "local-llm",
+        "apiUrl": "http://localhost:8000/v1/chat/completions"
+      },
+      {
+        "name": "internal-gpt",
+        "apiUrl": "http://internal.company.com/v1/chat/completions",
+        "proxy": "proxy.company.com:8080"
       }
     ],
-    "defaultModel": "qwen-turbo"
+    "defaultModel": "qwen-turbo",
+    "proxy": "proxy.company.com:8080"
   },
   "refreshInterval": 0
 }

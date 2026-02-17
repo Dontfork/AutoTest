@@ -747,12 +747,14 @@ AI 配置采用模型列表方式，支持多模型配置，无需指定 provide
 interface AIConfig {
     models: AIModelConfig[];    // 模型列表
     defaultModel?: string;      // 默认模型名称
+    proxy?: string;             // 全局代理（host:port）
 }
 
 interface AIModelConfig {
     name: string;               // 模型名称（用于识别 API 格式）
-    apiKey: string;             // API 密钥
+    apiKey?: string;            // API 密钥（可选，自部署模型可能不需要）
     apiUrl?: string;            // 自定义 API 地址（可选）
+    proxy?: string;             // 模型级代理（host:port，优先于全局代理）
 }
 ```
 
@@ -762,10 +764,21 @@ interface AIModelConfig {
   - OpenAI 模型：名称包含 `gpt`（如 gpt-3.5-turbo、gpt-4、gpt-4o）
   - 其他模型：使用自定义 `apiUrl`，采用 OpenAI 兼容格式
 
+**代理配置**：
+- 支持全局代理和模型级代理
+- 模型级代理优先于全局代理
+- 代理格式：`host:port`（如 `proxy.company.com:8080`）
+- 适用于需要通过代理访问外网的内网环境
+
+**自部署模型**：
+- 对于自部署的模型（如 Ollama、LocalAI），可以不配置 `apiKey`
+- 只需配置 `apiUrl` 指向本地服务地址
+
 **添加新模型**：
 1. 在配置文件的 `ai.models` 数组中添加模型配置
 2. 如果是 QWen 或 OpenAI 兼容模型，系统会自动识别
 3. 如果是自定义模型，需要配置 `apiUrl` 参数
+4. 如需代理，配置 `proxy` 参数（模型级或全局）
 
 ### 9.2 Markdown 渲染
 

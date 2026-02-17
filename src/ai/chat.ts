@@ -40,7 +40,7 @@ export class AIChat {
             return false;
         }
 
-        this.provider = createProvider(modelConfig);
+        this.provider = createProvider(modelConfig, aiConfig.proxy);
         this.currentModelName = modelName;
         return true;
     }

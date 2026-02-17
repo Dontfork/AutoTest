@@ -282,6 +282,73 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             
             assert.ok(result.warnings.some((w: string) => w.includes('provider/qwen/openai') && w.includes('迁移')));
         });
+
+        it('验证自部署模型无apiKey - 应通过', () => {
+            const config: any = {
+                projects: [{
+                    name: 'TestProject',
+                    localPath: '/path/to/project',
+                    server: {
+                        host: '192.168.1.1',
+                        port: 22,
+                        username: 'user',
+                        password: 'pass',
+                        remoteDirectory: '/home/user'
+                    }
+                }],
+                ai: {
+                    models: [{ name: 'local-llm', apiUrl: 'http://localhost:8000/v1/chat' }]
+                }
+            };
+            const result = validateConfig(config);
+            
+            assert.strictEqual(result.isValid, true);
+        });
+
+        it('验证全局代理配置格式 - 应验证格式', () => {
+            const config: any = {
+                projects: [{
+                    name: 'TestProject',
+                    localPath: '/path/to/project',
+                    server: {
+                        host: '192.168.1.1',
+                        port: 22,
+                        username: 'user',
+                        password: 'pass',
+                        remoteDirectory: '/home/user'
+                    }
+                }],
+                ai: {
+                    models: [{ name: 'qwen-turbo', apiKey: 'test-key' }],
+                    proxy: 'invalid-proxy'
+                }
+            };
+            const result = validateConfig(config);
+            
+            assert.ok(result.warnings.some((w: string) => w.includes('proxy') && w.includes('格式不正确')));
+        });
+
+        it('验证模型级代理配置格式 - 应验证格式', () => {
+            const config: any = {
+                projects: [{
+                    name: 'TestProject',
+                    localPath: '/path/to/project',
+                    server: {
+                        host: '192.168.1.1',
+                        port: 22,
+                        username: 'user',
+                        password: 'pass',
+                        remoteDirectory: '/home/user'
+                    }
+                }],
+                ai: {
+                    models: [{ name: 'qwen-turbo', apiKey: 'test-key', proxy: 'invalid' }]
+                }
+            };
+            const result = validateConfig(config);
+            
+            assert.ok(result.warnings.some((w: string) => w.includes('proxy') && w.includes('格式不正确')));
+        });
     });
 
     describe('命令和日志配置验证 - Commands and Logs Validation', () => {

@@ -273,9 +273,14 @@ AI 配置采用模型列表方式，支持配置多个 AI 模型：
         "name": "gpt-4",
         "apiKey": "your-openai-api-key",
         "apiUrl": "https://api.openai.com/v1/chat/completions"
+      },
+      {
+        "name": "local-llm",
+        "apiUrl": "http://localhost:8000/v1/chat/completions"
       }
     ],
-    "defaultModel": "qwen-turbo"
+    "defaultModel": "qwen-turbo",
+    "proxy": "proxy.company.com:8080"
   }
 }
 ```
@@ -284,14 +289,25 @@ AI 配置采用模型列表方式，支持配置多个 AI 模型：
 |------|------|
 | `models` | 模型配置列表 |
 | `models[].name` | 模型名称，系统根据名称自动识别 API 格式 |
-| `models[].apiKey` | API 密钥 |
+| `models[].apiKey` | API 密钥（可选，自部署模型可能不需要） |
 | `models[].apiUrl` | 自定义 API 地址（可选） |
+| `models[].proxy` | 模型级代理，格式 `host:port`（可选，优先于全局代理） |
 | `defaultModel` | 默认使用的模型名称（可选，默认使用第一个模型） |
+| `proxy` | 全局代理，格式 `host:port`（可选） |
 
 **模型自动识别**：
 - QWen 模型：名称包含 `qwen`（如 qwen-turbo、qwen-plus、qwen-max）
 - OpenAI 模型：名称包含 `gpt`（如 gpt-3.5-turbo、gpt-4、gpt-4o）
 - 其他模型：需配置 `apiUrl`，采用 OpenAI 兼容格式
+
+**代理配置**：
+- 支持全局代理和模型级代理
+- 模型级代理优先于全局代理
+- 适用于需要通过代理访问外网的内网环境
+
+**自部署模型**：
+- 对于自部署的模型（如 Ollama、LocalAI），可以不配置 `apiKey`
+- 只需配置 `apiUrl` 指向本地服务地址
 
 ## 功能可用性矩阵
 

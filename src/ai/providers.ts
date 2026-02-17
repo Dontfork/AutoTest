@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AIMessage, AIResponse, AIModelConfig } from '../types';
+import { AIMessage, AIResponse, AIModelConfig, AIConfig } from '../types';
 
 export interface AIProvider {
     send(messages: AIMessage[]): Promise<AIResponse>;
@@ -30,20 +30,30 @@ function getDefaultApiUrl(modelName: string): string {
 
 export class AIProviderImpl implements AIProvider {
     private config: AIModelConfig;
+    private globalProxy?: string;
 
-    constructor(config: AIModelConfig) {
+    constructor(config: AIModelConfig, globalProxy?: string) {
         this.config = config;
+        this.globalProxy = globalProxy;
+    }
+
+    private getProxy(): string | undefined {
+        return this.config.proxy || this.globalProxy;
     }
 
     async send(messages: AIMessage[]): Promise<AIResponse> {
         const apiUrl = this.config.apiUrl || getDefaultApiUrl(this.config.name);
         const isQwen = isQwenModel(this.config.name);
+        const proxy = this.getProxy();
 
         try {
             const headers: Record<string, string> = {
-                'Authorization': `Bearer ${this.config.apiKey}`,
                 'Content-Type': 'application/json'
             };
+
+            if (this.config.apiKey) {
+                headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+            }
 
             let requestBody: any;
             
@@ -61,10 +71,19 @@ export class AIProviderImpl implements AIProvider {
                 };
             }
 
-            const response = await axios.post(apiUrl, requestBody, {
+            const axiosConfig: any = {
                 headers,
                 timeout: 60000
-            });
+            };
+
+            if (proxy) {
+                axiosConfig.proxy = {
+                    host: proxy.split(':')[0],
+                    port: parseInt(proxy.split(':')[1] || '8080', 10)
+                };
+            }
+
+            const response = await axios.post(apiUrl, requestBody, axiosConfig);
 
             let content: string;
             if (isQwen) {
@@ -99,12 +118,16 @@ export class AIProviderImpl implements AIProvider {
     private async tryStream(messages: AIMessage[], onChunk: (chunk: string) => void): Promise<AIResponse> {
         const apiUrl = this.config.apiUrl || getDefaultApiUrl(this.config.name);
         const isQwen = isQwenModel(this.config.name);
+        const proxy = this.getProxy();
 
         const headers: Record<string, string> = {
-            'Authorization': `Bearer ${this.config.apiKey}`,
             'Content-Type': 'application/json',
             'Accept': 'text/event-stream'
         };
+
+        if (this.config.apiKey) {
+            headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+        }
 
         let requestBody: any;
         
@@ -126,14 +149,23 @@ export class AIProviderImpl implements AIProvider {
             };
         }
 
-        const response = await axios({
+        const axiosConfig: any = {
             method: 'POST',
             url: apiUrl,
             headers,
             data: requestBody,
             responseType: 'stream',
             timeout: 120000
-        });
+        };
+
+        if (proxy) {
+            axiosConfig.proxy = {
+                host: proxy.split(':')[0],
+                port: parseInt(proxy.split(':')[1] || '8080', 10)
+            };
+        }
+
+        const response = await axios(axiosConfig);
 
         return new Promise((resolve, reject) => {
             let fullContent = '';
@@ -190,8 +222,8 @@ export class AIProviderImpl implements AIProvider {
     }
 }
 
-export function createProvider(config: AIModelConfig): AIProvider {
-    return new AIProviderImpl(config);
+export function createProvider(config: AIModelConfig, globalProxy?: string): AIProvider {
+    return new AIProviderImpl(config, globalProxy);
 }
 
 export { isQwenModel, isOpenAIModel };

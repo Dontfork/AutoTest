@@ -33,13 +33,15 @@ export interface CommandVariables {
 
 export interface AIModelConfig {
     name: string;
-    apiKey: string;
+    apiKey?: string;
     apiUrl?: string;
+    proxy?: string;
 }
 
 export interface AIConfig {
     models: AIModelConfig[];
     defaultModel?: string;
+    proxy?: string;
 }
 
 export interface LogDirectoryConfig {
