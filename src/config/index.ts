@@ -268,7 +268,9 @@ export function loadConfig(workspacePath: string): AutoTestConfig {
             config = {
                 projects: finalConfig.projects,
                 ai: deepMerge(defaultAIConfig, finalConfig.ai || {}),
-                refreshInterval: finalConfig.refreshInterval ?? 0
+                refreshInterval: finalConfig.refreshInterval ?? 0,
+                textFileExtensions: finalConfig.textFileExtensions,
+                outputMode: finalConfig.outputMode
             };
         } else {
             config = convertLegacyConfig(loadedConfig, workspacePath);
