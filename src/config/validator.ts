@@ -28,11 +28,9 @@ const VALID_LOGS_KEYS = ['directories', 'downloadPath'];
 
 const VALID_LOG_DIRECTORY_KEYS = ['name', 'path'];
 
-const VALID_AI_KEYS = ['provider', 'qwen', 'openai'];
+const VALID_AI_KEYS = ['models', 'defaultModel'];
 
-const VALID_QWEN_KEYS = ['apiKey', 'apiUrl', 'model'];
-
-const VALID_OPENAI_KEYS = ['apiKey', 'apiUrl', 'model'];
+const VALID_MODEL_KEYS = ['name', 'apiKey', 'apiUrl'];
 
 const REQUIRED_PROJECT_FIELDS = [
     { path: 'name', field: 'name', defaultValue: '未命名工程' },
@@ -45,17 +43,7 @@ const REQUIRED_SERVER_FIELDS = [
 ];
 
 const DEFAULT_AI_CONFIG: AIConfig = {
-    provider: "qwen",
-    qwen: {
-        apiKey: "",
-        apiUrl: "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
-        model: "qwen-turbo"
-    },
-    openai: {
-        apiKey: "",
-        apiUrl: "https://api.openai.com/v1/chat/completions",
-        model: "gpt-3.5-turbo"
-    }
+    models: []
 };
 
 function isValidPath(path: string): boolean {
@@ -298,40 +286,36 @@ export function validateConfig(config: any): ConfigValidationResult {
     } else {
         unknownKeys.push(...checkUnknownKeys(config.ai, VALID_AI_KEYS, 'ai'));
 
-        if (config.ai.provider && !['qwen', 'openai'].includes(config.ai.provider)) {
-            errors.push(`AI 配置的 provider "${config.ai.provider}" 无效，只支持 "qwen" 或 "openai"`);
-        }
-        
-        if (!config.ai.provider) {
-            warnings.push('AI 配置缺少 "provider" 字段，将使用默认值 "qwen"');
-        }
-        
-        const provider = config.ai.provider || 'qwen';
-        
-        if (provider === 'qwen') {
-            if (!config.ai.qwen || typeof config.ai.qwen !== 'object') {
-                warnings.push('QWen AI 配置缺少 qwen 配置对象');
-            } else {
-                unknownKeys.push(...checkUnknownKeys(config.ai.qwen, VALID_QWEN_KEYS, 'ai.qwen'));
+        if (!config.ai.models || !Array.isArray(config.ai.models)) {
+            warnings.push('AI 配置缺少 "models" 数组，AI 对话功能将无法使用');
+        } else {
+            if (config.ai.models.length === 0) {
+                warnings.push('AI 配置的 "models" 数组为空，AI 对话功能将无法使用');
+            }
 
-                if (!config.ai.qwen.apiKey) {
-                    warnings.push('QWen AI 配置缺少 apiKey，AI 对话功能可能无法使用');
+            for (let i = 0; i < config.ai.models.length; i++) {
+                const model = config.ai.models[i];
+                const modelPrefix = `ai.models[${i}]`;
+
+                unknownKeys.push(...checkUnknownKeys(model, VALID_MODEL_KEYS, modelPrefix));
+
+                if (!model.name || typeof model.name !== 'string') {
+                    warnings.push(`AI 模型 ${i + 1} 缺少 "name" 字段`);
                 }
-                if (config.ai.qwen.apiUrl && !isValidUrl(config.ai.qwen.apiUrl)) {
-                    warnings.push(`QWen AI 配置的 apiUrl "${config.ai.qwen.apiUrl}" 不是有效的 URL`);
+
+                if (!model.apiKey) {
+                    warnings.push(`AI 模型 "${model.name || i + 1}" 缺少 apiKey，该模型将无法使用`);
+                }
+
+                if (model.apiUrl && !isValidUrl(model.apiUrl)) {
+                    warnings.push(`AI 模型 "${model.name || i + 1}" 的 apiUrl "${model.apiUrl}" 不是有效的 URL`);
                 }
             }
-        } else if (provider === 'openai') {
-            if (!config.ai.openai || typeof config.ai.openai !== 'object') {
-                warnings.push('OpenAI 配置缺少 openai 配置对象');
-            } else {
-                unknownKeys.push(...checkUnknownKeys(config.ai.openai, VALID_OPENAI_KEYS, 'ai.openai'));
 
-                if (!config.ai.openai.apiKey) {
-                    warnings.push('OpenAI 配置缺少 apiKey，AI 对话功能可能无法使用');
-                }
-                if (config.ai.openai.apiUrl && !isValidUrl(config.ai.openai.apiUrl)) {
-                    warnings.push(`OpenAI 配置的 apiUrl "${config.ai.openai.apiUrl}" 不是有效的 URL`);
+            if (config.ai.defaultModel) {
+                const modelNames = config.ai.models.map((m: any) => m.name);
+                if (!modelNames.includes(config.ai.defaultModel)) {
+                    warnings.push(`AI 配置的 defaultModel "${config.ai.defaultModel}" 在 models 中不存在`);
                 }
             }
         }
@@ -408,9 +392,8 @@ export function fillMissingFields(config: any, missingFields: MissingField[]): a
         result.ai = DEFAULT_AI_CONFIG;
     } else {
         result.ai = {
-            provider: result.ai.provider || DEFAULT_AI_CONFIG.provider,
-            qwen: { ...DEFAULT_AI_CONFIG.qwen, ...result.ai.qwen },
-            openai: { ...DEFAULT_AI_CONFIG.openai, ...result.ai.openai }
+            models: result.ai.models || [],
+            defaultModel: result.ai.defaultModel
         };
     }
 

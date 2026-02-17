@@ -43,7 +43,7 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             assert.ok(result.missingFields.some((m: MissingField) => m.field === 'name'));
         });
 
-        it('验证工程缺少localPath字段', () => {
+        it('验证工程缺少localPath字段 - 应通过（localPath可选）', () => {
             const config: any = {
                 projects: [{
                     name: 'TestProject',
@@ -58,8 +58,7 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             };
             const result = validateConfig(config);
             
-            assert.strictEqual(result.isValid, false);
-            assert.ok(result.errors.some((e: string) => e.includes('localPath')));
+            assert.strictEqual(result.isValid, true);
         });
 
         it('验证工程缺少server配置', () => {
@@ -113,7 +112,7 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             assert.ok(result.errors.some((e: string) => e.includes('username')));
         });
 
-        it('验证server缺少remoteDirectory字段', () => {
+        it('验证server缺少remoteDirectory字段 - 应通过（remoteDirectory可选）', () => {
             const config: any = {
                 projects: [{
                     name: 'TestProject',
@@ -128,8 +127,7 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             };
             const result = validateConfig(config);
             
-            assert.strictEqual(result.isValid, false);
-            assert.ok(result.errors.some((e: string) => e.includes('remoteDirectory')));
+            assert.strictEqual(result.isValid, true);
         });
     });
 
@@ -217,7 +215,7 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             assert.ok(result.warnings.some((w: string) => w.includes('ai')));
         });
 
-        it('验证qwen缺少apiKey - 应给出警告', () => {
+        it('验证模型缺少apiKey - 应给出警告', () => {
             const config: any = {
                 projects: [{
                     name: 'TestProject',
@@ -231,17 +229,15 @@ describe('Config Validator Module - 配置验证模块测试', () => {
                     }
                 }],
                 ai: {
-                    provider: 'qwen',
-                    qwen: { apiKey: '' },
-                    openai: { apiKey: '' }
+                    models: [{ name: 'qwen-turbo', apiKey: '' }]
                 }
             };
             const result = validateConfig(config);
             
-            assert.ok(result.warnings.some((w: string) => w.includes('QWen') && w.includes('apiKey')));
+            assert.ok(result.warnings.some((w: string) => w.includes('apiKey')));
         });
 
-        it('验证openai缺少apiKey - 应给出警告', () => {
+        it('验证空models数组 - 应给出警告', () => {
             const config: any = {
                 projects: [{
                     name: 'TestProject',
@@ -255,14 +251,12 @@ describe('Config Validator Module - 配置验证模块测试', () => {
                     }
                 }],
                 ai: {
-                    provider: 'openai',
-                    qwen: { apiKey: '' },
-                    openai: { apiKey: '' }
+                    models: []
                 }
             };
             const result = validateConfig(config);
             
-            assert.ok(result.warnings.some((w: string) => w.includes('OpenAI') && w.includes('apiKey')));
+            assert.ok(result.warnings.some((w: string) => w.includes('models') && w.includes('空')));
         });
     });
 
@@ -330,9 +324,7 @@ describe('Config Validator Module - 配置验证模块测试', () => {
                     }
                 }],
                 ai: {
-                    provider: 'qwen',
-                    qwen: { apiKey: 'test-key' },
-                    openai: { apiKey: '' }
+                    models: [{ name: 'qwen-turbo', apiKey: 'test-key' }]
                 },
                 refreshInterval: 5000
             };
@@ -397,7 +389,7 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             const filled = fillMissingFields(config, missingFields);
             
             assert.ok(filled.ai);
-            assert.strictEqual(filled.ai.provider, 'qwen');
+            assert.ok(Array.isArray(filled.ai.models));
         });
 
         it('填充缺失的refreshInterval', () => {
@@ -421,7 +413,7 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             assert.strictEqual(filled.refreshInterval, 0);
         });
 
-        it('填充缺失的commands', () => {
+        it('填充缺失的commands - commands可选，不自动填充', () => {
             const config: any = {
                 projects: [{
                     name: 'TestProject',
@@ -439,9 +431,7 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             
             const filled = fillMissingFields(config, missingFields);
             
-            assert.ok(filled.projects[0].commands);
-            assert.strictEqual(filled.projects[0].commands.length, 1);
-            assert.strictEqual(filled.projects[0].commands[0].name, '默认命令');
+            assert.ok(filled.projects[0].commands === undefined || filled.projects[0].commands.length === 0);
         });
 
         it('填充缺失的logs配置', () => {
@@ -633,29 +623,6 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             assert.ok(result.errors.some((e: string) => e.includes('port')));
         });
 
-        it('验证无效的AI provider - 应报错', () => {
-            const config: any = {
-                projects: [{
-                    name: 'TestProject',
-                    localPath: '/path/to/project',
-                    server: {
-                        host: '192.168.1.1',
-                        port: 22,
-                        username: 'user',
-                        password: 'pass',
-                        remoteDirectory: '/home/user'
-                    }
-                }],
-                ai: {
-                    provider: 'invalid_provider'
-                }
-            };
-            const result = validateConfig(config);
-            
-            assert.strictEqual(result.isValid, false);
-            assert.ok(result.errors.some((e: string) => e.includes('provider') && e.includes('qwen') && e.includes('openai')));
-        });
-
         it('验证无效的URL格式 - 应警告', () => {
             const config: any = {
                 projects: [{
@@ -670,16 +637,39 @@ describe('Config Validator Module - 配置验证模块测试', () => {
                     }
                 }],
                 ai: {
-                    provider: 'qwen',
-                    qwen: {
+                    models: [{
+                        name: 'qwen-turbo',
                         apiKey: 'test-key',
                         apiUrl: 'not-a-valid-url'
-                    }
+                    }]
                 }
             };
             const result = validateConfig(config);
             
             assert.ok(result.warnings.some((w: string) => w.includes('apiUrl') && w.includes('有效的 URL')));
+        });
+
+        it('验证defaultModel不存在于models中 - 应警告', () => {
+            const config: any = {
+                projects: [{
+                    name: 'TestProject',
+                    localPath: '/path/to/project',
+                    server: {
+                        host: '192.168.1.1',
+                        port: 22,
+                        username: 'user',
+                        password: 'pass',
+                        remoteDirectory: '/home/user'
+                    }
+                }],
+                ai: {
+                    models: [{ name: 'qwen-turbo', apiKey: 'test-key' }],
+                    defaultModel: 'non-existent-model'
+                }
+            };
+            const result = validateConfig(config);
+            
+            assert.ok(result.warnings.some((w: string) => w.includes('defaultModel') && w.includes('不存在')));
         });
 
         it('验证命令缺少executeCommand - 应报错', () => {

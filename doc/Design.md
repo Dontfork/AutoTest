@@ -195,17 +195,18 @@ interface ProjectConfig {
         }
     ],
     "ai": {
-        "provider": "qwen",
-        "qwen": {
-            "apiKey": "your-qwen-api-key",
-            "apiUrl": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
-            "model": "qwen-turbo"
-        },
-        "openai": {
-            "apiKey": "your-openai-api-key",
-            "apiUrl": "https://api.openai.com/v1/chat/completions",
-            "model": "gpt-3.5-turbo"
-        }
+        "models": [
+            {
+                "name": "qwen-turbo",
+                "apiKey": "your-qwen-api-key"
+            },
+            {
+                "name": "gpt-4",
+                "apiKey": "your-openai-api-key",
+                "apiUrl": "https://api.openai.com/v1/chat/completions"
+            }
+        ],
+        "defaultModel": "qwen-turbo"
     },
     "refreshInterval": 5000
 }
@@ -244,9 +245,10 @@ interface ProjectConfig {
         }
     ],
     "ai": {
-        "provider": "qwen",
-        "qwen": { "apiKey": "", "apiUrl": "", "model": "qwen-turbo" },
-        "openai": { "apiKey": "", "apiUrl": "", "model": "gpt-3.5-turbo" }
+        "models": [
+            { "name": "qwen-turbo", "apiKey": "your-qwen-api-key" }
+        ],
+        "defaultModel": "qwen-turbo"
     }
 }
 ```
@@ -737,13 +739,33 @@ GitChangeDetector.getGitChanges()
 
 ## 9. 扩展性设计
 
-### 9.1 AI 提供商扩展
+### 9.1 AI 模型配置
 
-新增 AI 提供商需要:
-1. 在 `types/index.ts` 中添加配置接口
-2. 在 `ai/providers.ts` 中实现新的 Provider 类
-3. 在 `AIConfig` 中添加配置项
-4. 在 `sendMessage()` 中添加路由逻辑
+AI 配置采用模型列表方式，支持多模型配置，无需指定 provider：
+
+```typescript
+interface AIConfig {
+    models: AIModelConfig[];    // 模型列表
+    defaultModel?: string;      // 默认模型名称
+}
+
+interface AIModelConfig {
+    name: string;               // 模型名称（用于识别 API 格式）
+    apiKey: string;             // API 密钥
+    apiUrl?: string;            // 自定义 API 地址（可选）
+}
+```
+
+**模型自动识别**：
+- 系统根据模型名称自动选择对应的 API 格式：
+  - QWen 模型：名称包含 `qwen`（如 qwen-turbo、qwen-plus、qwen-max）
+  - OpenAI 模型：名称包含 `gpt`（如 gpt-3.5-turbo、gpt-4、gpt-4o）
+  - 其他模型：使用自定义 `apiUrl`，采用 OpenAI 兼容格式
+
+**添加新模型**：
+1. 在配置文件的 `ai.models` 数组中添加模型配置
+2. 如果是 QWen 或 OpenAI 兼容模型，系统会自动识别
+3. 如果是自定义模型，需要配置 `apiUrl` 参数
 
 ### 9.2 Markdown 渲染
 

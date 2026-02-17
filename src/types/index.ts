@@ -31,22 +31,15 @@ export interface CommandVariables {
     remoteDir: string;
 }
 
-export interface QWenConfig {
+export interface AIModelConfig {
+    name: string;
     apiKey: string;
-    apiUrl: string;
-    model: string;
-}
-
-export interface OpenAIConfig {
-    apiKey: string;
-    apiUrl: string;
-    model: string;
+    apiUrl?: string;
 }
 
 export interface AIConfig {
-    provider: 'qwen' | 'openai';
-    qwen: QWenConfig;
-    openai: OpenAIConfig;
+    models: AIModelConfig[];
+    defaultModel?: string;
 }
 
 export interface LogDirectoryConfig {

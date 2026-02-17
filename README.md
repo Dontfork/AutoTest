@@ -133,17 +133,18 @@ vsce package
     }
   ],
   "ai": {
-    "provider": "qwen",
-    "qwen": {
-      "apiKey": "your-qwen-api-key",
-      "apiUrl": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
-      "model": "qwen-turbo"
-    },
-    "openai": {
-      "apiKey": "your-openai-api-key",
-      "apiUrl": "https://api.openai.com/v1/chat/completions",
-      "model": "gpt-3.5-turbo"
-    }
+    "models": [
+      {
+        "name": "qwen-turbo",
+        "apiKey": "your-qwen-api-key"
+      },
+      {
+        "name": "gpt-4",
+        "apiKey": "your-openai-api-key",
+        "apiUrl": "https://api.openai.com/v1/chat/completions"
+      }
+    ],
+    "defaultModel": "qwen-turbo"
   },
   "refreshInterval": 0
 }
@@ -182,9 +183,10 @@ vsce package
     }
   ],
   "ai": {
-    "provider": "qwen",
-    "qwen": { "apiKey": "", "apiUrl": "", "model": "qwen-turbo" },
-    "openai": { "apiKey": "", "apiUrl": "", "model": "gpt-3.5-turbo" }
+    "models": [
+      { "name": "qwen-turbo", "apiKey": "your-qwen-api-key" }
+    ],
+    "defaultModel": "qwen-turbo"
   }
 }
 ```
@@ -255,6 +257,42 @@ vsce package
 | `ai` | AI 服务配置（全局） |
 | `refreshInterval` | 日志刷新间隔（毫秒），默认 0（禁用自动刷新） |
 
+### AI 配置说明
+
+AI 配置采用模型列表方式，支持配置多个 AI 模型：
+
+```json
+{
+  "ai": {
+    "models": [
+      {
+        "name": "qwen-turbo",
+        "apiKey": "your-qwen-api-key"
+      },
+      {
+        "name": "gpt-4",
+        "apiKey": "your-openai-api-key",
+        "apiUrl": "https://api.openai.com/v1/chat/completions"
+      }
+    ],
+    "defaultModel": "qwen-turbo"
+  }
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `models` | 模型配置列表 |
+| `models[].name` | 模型名称，系统根据名称自动识别 API 格式 |
+| `models[].apiKey` | API 密钥 |
+| `models[].apiUrl` | 自定义 API 地址（可选） |
+| `defaultModel` | 默认使用的模型名称（可选，默认使用第一个模型） |
+
+**模型自动识别**：
+- QWen 模型：名称包含 `qwen`（如 qwen-turbo、qwen-plus、qwen-max）
+- OpenAI 模型：名称包含 `gpt`（如 gpt-3.5-turbo、gpt-4、gpt-4o）
+- 其他模型：需配置 `apiUrl`，采用 OpenAI 兼容格式
+
 ## 功能可用性矩阵
 
 | 功能 | 完整配置 | 仅 localPath | 仅 logs 配置 | 无路径配置 |
@@ -272,27 +310,6 @@ vsce package
 > - **仅 localPath**: 仅配置了 `localPath`，用于 Git 监控和本地变量命令
 > - **仅 logs 配置**: 仅配置了 `logs.directories`，用于日志监控
 > - **无路径配置**: 仅配置了 `server` 和 `commands`（无变量），用于执行简单快捷命令
-
-## 支持的 AI 模型
-
-### QWen (通义千问)
-
-| 模型 | 说明 |
-|------|------|
-| qwen-turbo | 快速响应模型 |
-| qwen-plus | 增强模型 |
-| qwen-max | 最强模型 |
-| qwen-max-longcontext | 长上下文模型 |
-
-### OpenAI
-
-| 模型 | 说明 |
-|------|------|
-| gpt-3.5-turbo | 快速响应模型 |
-| gpt-3.5-turbo-16k | 长上下文模型 |
-| gpt-4 | 高级模型 |
-| gpt-4-32k | 超长上下文模型 |
-| gpt-4-turbo | 最新模型 |
 
 ## 命令列表
 

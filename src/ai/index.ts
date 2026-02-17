@@ -1,3 +1,3 @@
 export { AIChat } from './chat';
-export { QWenProvider, OpenAIProvider, AIProvider } from './providers';
+export { AIProvider, AIProviderImpl, createProvider, isQwenModel, isOpenAIModel } from './providers';
 export { SessionManager } from './sessionManager';

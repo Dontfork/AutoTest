@@ -1,30 +1,57 @@
 import { getConfig } from '../config';
-import { AIMessage, AIResponse, ChatSession } from '../types';
-import { QWenProvider, OpenAIProvider, AIProvider } from './providers';
+import { AIMessage, AIResponse, ChatSession, AIModelConfig } from '../types';
+import { createProvider, AIProvider } from './providers';
 import { SessionManager } from './sessionManager';
 
 export class AIChat {
-    private provider: AIProvider;
+    private provider: AIProvider | null = null;
     private sessionManager: SessionManager;
+    private currentModelName: string | null = null;
 
     constructor(sessionManager: SessionManager) {
         this.sessionManager = sessionManager;
-        this.provider = this.createProvider();
+        this.initProvider();
     }
 
-    private createProvider(): AIProvider {
+    private initProvider(): void {
         const config = getConfig();
         const aiConfig = config.ai;
         
-        if (aiConfig.provider === 'qwen') {
-            return new QWenProvider(aiConfig.qwen);
-        } else {
-            return new OpenAIProvider(aiConfig.openai);
+        if (!aiConfig || !aiConfig.models || aiConfig.models.length === 0) {
+            this.provider = null;
+            this.currentModelName = null;
+            return;
         }
+
+        const modelName = aiConfig.defaultModel || aiConfig.models[0].name;
+        this.setModel(modelName);
     }
 
-    setProvider(provider: 'qwen' | 'openai'): void {
-        this.provider = this.createProvider();
+    setModel(modelName: string): boolean {
+        const config = getConfig();
+        const aiConfig = config.ai;
+        
+        if (!aiConfig || !aiConfig.models) {
+            return false;
+        }
+
+        const modelConfig = aiConfig.models.find(m => m.name === modelName);
+        if (!modelConfig) {
+            return false;
+        }
+
+        this.provider = createProvider(modelConfig);
+        this.currentModelName = modelName;
+        return true;
+    }
+
+    getCurrentModel(): string | null {
+        return this.currentModelName;
+    }
+
+    getAvailableModels(): AIModelConfig[] {
+        const config = getConfig();
+        return config.ai?.models || [];
     }
 
     getCurrentSession(): ChatSession | null {
@@ -58,16 +85,20 @@ export class AIChat {
     async sendMessage(userMessage: string): Promise<AIResponse> {
         const config = getConfig();
         
-        if (!config.ai) {
-            return { content: '', error: '请先配置 AI 服务' };
+        if (!config.ai || !config.ai.models || config.ai.models.length === 0) {
+            return { content: '', error: '请先配置 AI 模型' };
         }
 
-        if (config.ai.provider === 'qwen' && !config.ai.qwen?.apiKey) {
-            return { content: '', error: '请配置 QWen API Key' };
+        if (!this.provider) {
+            this.initProvider();
+            if (!this.provider) {
+                return { content: '', error: 'AI 提供者初始化失败' };
+            }
         }
 
-        if (config.ai.provider === 'openai' && !config.ai.openai?.apiKey) {
-            return { content: '', error: '请配置 OpenAI API Key' };
+        const modelConfig = config.ai.models.find(m => m.name === this.currentModelName);
+        if (!modelConfig || !modelConfig.apiKey) {
+            return { content: '', error: `请配置模型 "${this.currentModelName}" 的 API Key` };
         }
 
         let session = this.getCurrentSession();
@@ -92,16 +123,20 @@ export class AIChat {
     ): Promise<AIResponse> {
         const config = getConfig();
         
-        if (!config.ai) {
-            return { content: '', error: '请先配置 AI 服务' };
+        if (!config.ai || !config.ai.models || config.ai.models.length === 0) {
+            return { content: '', error: '请先配置 AI 模型' };
         }
 
-        if (config.ai.provider === 'qwen' && !config.ai.qwen?.apiKey) {
-            return { content: '', error: '请配置 QWen API Key' };
+        if (!this.provider) {
+            this.initProvider();
+            if (!this.provider) {
+                return { content: '', error: 'AI 提供者初始化失败' };
+            }
         }
 
-        if (config.ai.provider === 'openai' && !config.ai.openai?.apiKey) {
-            return { content: '', error: '请配置 OpenAI API Key' };
+        const modelConfig = config.ai.models.find(m => m.name === this.currentModelName);
+        if (!modelConfig || !modelConfig.apiKey) {
+            return { content: '', error: `请配置模型 "${this.currentModelName}" 的 API Key` };
         }
 
         let session = this.getCurrentSession();

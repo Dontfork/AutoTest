@@ -11,16 +11,15 @@ interface AIResponse {
     error?: string;
 }
 
-interface QWenConfig {
+interface AIModelConfig {
+    name: string;
     apiKey: string;
-    apiUrl: string;
-    model: string;
+    apiUrl?: string;
 }
 
-interface OpenAIConfig {
-    apiKey: string;
-    apiUrl: string;
-    model: string;
+interface AIConfig {
+    models: AIModelConfig[];
+    defaultModel?: string;
 }
 
 interface ChatSession {
@@ -76,110 +75,87 @@ describe('AI Module - AI对话模块测试', () => {
         });
     });
 
-    describe('QWen Provider - 通义千问提供者', () => {
-        it('消息格式化 - 将消息转换为QWen API所需格式', () => {
-            const messages: AIMessage[] = [
-                { role: 'user', content: 'What is TypeScript?' }
-            ];
-            
-            const formatted = messages.map(m => ({
-                role: m.role,
-                content: m.content
-            }));
-            
-            assert.strictEqual(formatted.length, 1);
-            assert.strictEqual(formatted[0].role, 'user');
-            assert.strictEqual(formatted[0].content, 'What is TypeScript?');
-        });
-
-        it('API URL验证 - 必须是HTTPS且包含dashscope域名', () => {
-            const qwenUrl = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
-            
-            assert.ok(qwenUrl.startsWith('https://'));
-            assert.ok(qwenUrl.includes('dashscope'));
-        });
-
-        it('模型选择验证 - 使用qwen-turbo模型', () => {
-            const model = 'qwen-turbo';
-            
-            assert.ok(model.startsWith('qwen'));
-        });
-
-        it('QWen模型配置 - 支持多种模型选择', () => {
-            const qwenModels = ['qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-max-longcontext'];
-            const config: QWenConfig = {
-                apiKey: 'test-key',
-                apiUrl: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
-                model: 'qwen-max'
+    describe('Model Configuration - 模型配置', () => {
+        it('模型配置包含必要字段 - name、apiKey', () => {
+            const modelConfig: AIModelConfig = {
+                name: 'qwen-turbo',
+                apiKey: 'test-key'
             };
             
-            assert.ok(qwenModels.includes(config.model));
-            assert.strictEqual(config.model, 'qwen-max');
+            assert.ok(modelConfig.name);
+            assert.ok(modelConfig.apiKey);
         });
 
-        it('QWen模型默认值 - 未配置时使用qwen-turbo', () => {
-            const defaultModel = 'qwen-turbo';
-            const config: QWenConfig = {
-                apiKey: 'test-key',
-                apiUrl: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
-                model: ''
+        it('模型配置可选字段 - apiUrl', () => {
+            const modelConfig: AIModelConfig = {
+                name: 'gpt-4',
+                apiKey: 'sk-test',
+                apiUrl: 'https://custom-api.example.com/v1/chat/completions'
             };
-            const actualModel = config.model || defaultModel;
             
-            assert.strictEqual(actualModel, 'qwen-turbo');
+            assert.ok(modelConfig.apiUrl);
+        });
+
+        it('多模型配置 - 支持配置多个模型', () => {
+            const aiConfig: AIConfig = {
+                models: [
+                    { name: 'qwen-turbo', apiKey: 'qwen-key' },
+                    { name: 'gpt-4', apiKey: 'openai-key' }
+                ]
+            };
+            
+            assert.strictEqual(aiConfig.models.length, 2);
+        });
+
+        it('默认模型配置 - defaultModel指定默认模型', () => {
+            const aiConfig: AIConfig = {
+                models: [
+                    { name: 'qwen-turbo', apiKey: 'qwen-key' },
+                    { name: 'gpt-4', apiKey: 'openai-key' }
+                ],
+                defaultModel: 'gpt-4'
+            };
+            
+            assert.strictEqual(aiConfig.defaultModel, 'gpt-4');
+        });
+
+        it('模型名称唯一性 - 不同模型使用不同名称', () => {
+            const aiConfig: AIConfig = {
+                models: [
+                    { name: 'qwen-turbo', apiKey: 'key1' },
+                    { name: 'qwen-plus', apiKey: 'key2' },
+                    { name: 'gpt-4', apiKey: 'key3' }
+                ]
+            };
+            
+            const names = aiConfig.models.map(m => m.name);
+            const uniqueNames = [...new Set(names)];
+            
+            assert.strictEqual(names.length, uniqueNames.length);
         });
     });
 
-    describe('OpenAI Provider - OpenAI提供者', () => {
-        it('消息格式化 - 将消息转换为OpenAI API所需格式', () => {
-            const messages: AIMessage[] = [
-                { role: 'system', content: 'You are a helpful assistant.' },
-                { role: 'user', content: 'Hello!' }
-            ];
+    describe('Model Type Detection - 模型类型检测', () => {
+        it('QWen模型检测 - 名称包含qwen', () => {
+            const qwenModels = ['qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-max-longcontext'];
             
-            const formatted = messages.map(m => ({
-                role: m.role,
-                content: m.content
-            }));
-            
-            assert.strictEqual(formatted.length, 2);
+            qwenModels.forEach(model => {
+                assert.ok(model.toLowerCase().includes('qwen'));
+            });
         });
 
-        it('API URL验证 - 必须是HTTPS且包含openai.com域名', () => {
-            const openaiUrl = 'https://api.openai.com/v1/chat/completions';
+        it('OpenAI模型检测 - 名称包含gpt', () => {
+            const openaiModels = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini'];
             
-            assert.ok(openaiUrl.startsWith('https://'));
-            assert.ok(openaiUrl.includes('openai.com'));
+            openaiModels.forEach(model => {
+                assert.ok(model.toLowerCase().includes('gpt'));
+            });
         });
 
-        it('模型选择验证 - 使用gpt-3.5-turbo模型', () => {
-            const model = 'gpt-3.5-turbo';
+        it('自定义模型支持 - 支持任意模型名称', () => {
+            const customModel = 'my-custom-llm';
             
-            assert.ok(model.startsWith('gpt'));
-        });
-
-        it('OpenAI模型配置 - 支持多种模型选择', () => {
-            const openaiModels = ['gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-32k', 'gpt-4-turbo'];
-            const config: OpenAIConfig = {
-                apiKey: 'sk-test',
-                apiUrl: 'https://api.openai.com/v1/chat/completions',
-                model: 'gpt-4'
-            };
-            
-            assert.ok(openaiModels.includes(config.model));
-            assert.strictEqual(config.model, 'gpt-4');
-        });
-
-        it('OpenAI模型默认值 - 未配置时使用gpt-3.5-turbo', () => {
-            const defaultModel = 'gpt-3.5-turbo';
-            const config: OpenAIConfig = {
-                apiKey: 'sk-test',
-                apiUrl: 'https://api.openai.com/v1/chat/completions',
-                model: ''
-            };
-            const actualModel = config.model || defaultModel;
-            
-            assert.strictEqual(actualModel, 'gpt-3.5-turbo');
+            assert.ok(customModel.length > 0);
         });
     });
 
@@ -212,76 +188,42 @@ describe('AI Module - AI对话模块测试', () => {
         });
     });
 
-    describe('Provider Selection - 提供者选择', () => {
-        it('选择qwen提供者 - provider值为"qwen"', () => {
-            const provider = 'qwen';
-            
-            assert.strictEqual(provider, 'qwen');
-        });
-
-        it('选择openai提供者 - provider值为"openai"', () => {
-            const provider = 'openai';
-            
-            assert.strictEqual(provider, 'openai');
-        });
-
-        it('提供者类型验证 - 必须是qwen或openai之一', () => {
-            const validProviders = ['qwen', 'openai'];
-            const testProvider = 'qwen';
-            
-            assert.ok(validProviders.includes(testProvider));
-        });
-    });
-
     describe('API Configuration - API配置', () => {
-        it('API密钥配置验证 - apiKey、apiUrl、model都必须存在', () => {
-            const qwenConfig: QWenConfig = {
-                apiKey: 'test-api-key',
-                apiUrl: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
-                model: 'qwen-turbo'
+        it('API密钥配置验证 - apiKey必须存在', () => {
+            const modelConfig: AIModelConfig = {
+                name: 'qwen-turbo',
+                apiKey: 'test-api-key'
             };
             
-            assert.ok(qwenConfig.apiKey);
-            assert.ok(qwenConfig.apiUrl);
-            assert.ok(qwenConfig.model);
-        });
-
-        it('OpenAI配置验证 - apiKey、apiUrl、model都必须存在', () => {
-            const openaiConfig: OpenAIConfig = {
-                apiKey: 'sk-test',
-                apiUrl: 'https://api.openai.com/v1/chat/completions',
-                model: 'gpt-4'
-            };
-            
-            assert.ok(openaiConfig.apiKey);
-            assert.ok(openaiConfig.apiUrl);
-            assert.ok(openaiConfig.model);
+            assert.ok(modelConfig.apiKey);
         });
 
         it('缺失API密钥处理 - apiKey为空字符串', () => {
             const config = {
-                apiKey: '',
-                apiUrl: 'https://api.example.com',
-                model: 'test-model'
+                name: 'test-model',
+                apiKey: ''
             };
             
             assert.strictEqual(config.apiKey, '');
         });
 
-        it('默认API URL - QWen和OpenAI各有默认URL', () => {
-            const defaultQwenUrl = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
-            const defaultOpenAIUrl = 'https://api.openai.com/v1/chat/completions';
+        it('默认API URL - 根据模型名称自动选择', () => {
+            const qwenDefaultUrl = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
+            const openaiDefaultUrl = 'https://api.openai.com/v1/chat/completions';
             
-            assert.ok(defaultQwenUrl);
-            assert.ok(defaultOpenAIUrl);
+            assert.ok(qwenDefaultUrl);
+            assert.ok(openaiDefaultUrl);
         });
 
-        it('默认模型名称 - QWen默认qwen-turbo，OpenAI默认gpt-3.5-turbo', () => {
-            const defaultQwenModel = 'qwen-turbo';
-            const defaultOpenAIModel = 'gpt-3.5-turbo';
+        it('自定义API URL - 覆盖默认URL', () => {
+            const modelConfig: AIModelConfig = {
+                name: 'gpt-4',
+                apiKey: 'sk-test',
+                apiUrl: 'https://custom-openai-proxy.com/v1/chat/completions'
+            };
             
-            assert.strictEqual(defaultQwenModel, 'qwen-turbo');
-            assert.strictEqual(defaultOpenAIModel, 'gpt-3.5-turbo');
+            assert.ok(modelConfig.apiUrl);
+            assert.ok(!modelConfig.apiUrl?.includes('api.openai.com'));
         });
     });
 
@@ -476,6 +418,41 @@ describe('AI Module - AI对话模块测试', () => {
             assert.strictEqual(sessions[0].id, 'session-2');
             assert.strictEqual(sessions[1].id, 'session-1');
             assert.strictEqual(sessions[2].id, 'session-3');
+        });
+    });
+
+    describe('Model Switching - 模型切换', () => {
+        it('切换模型 - 更新当前使用的模型', () => {
+            let currentModel = 'qwen-turbo';
+            
+            currentModel = 'gpt-4';
+            
+            assert.strictEqual(currentModel, 'gpt-4');
+        });
+
+        it('获取可用模型列表 - 返回所有配置的模型', () => {
+            const aiConfig: AIConfig = {
+                models: [
+                    { name: 'qwen-turbo', apiKey: 'key1' },
+                    { name: 'gpt-4', apiKey: 'key2' }
+                ]
+            };
+            
+            assert.strictEqual(aiConfig.models.length, 2);
+        });
+
+        it('模型配置验证 - 切换前验证模型存在', () => {
+            const aiConfig: AIConfig = {
+                models: [
+                    { name: 'qwen-turbo', apiKey: 'key1' },
+                    { name: 'gpt-4', apiKey: 'key2' }
+                ]
+            };
+            
+            const targetModel = 'gpt-4';
+            const exists = aiConfig.models.some(m => m.name === targetModel);
+            
+            assert.ok(exists);
         });
     });
 });

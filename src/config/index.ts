@@ -14,17 +14,7 @@ import { validateConfig, fillMissingFields } from './validator';
 import { showValidationMessages, saveConfigWithDefaults } from './validatorUI';
 
 const defaultAIConfig: AIConfig = {
-    provider: "qwen",
-    qwen: {
-        apiKey: "",
-        apiUrl: "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
-        model: "qwen-turbo"
-    },
-    openai: {
-        apiKey: "",
-        apiUrl: "https://api.openai.com/v1/chat/completions",
-        model: "gpt-3.5-turbo"
-    }
+    models: []
 };
 
 const defaultConfig: AutoTestConfig = {

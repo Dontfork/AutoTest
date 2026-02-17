@@ -288,4 +288,29 @@ describe('AI Streaming - 流式输出测试', () => {
             assert.strictEqual(lines.length, 3);
         });
     });
+
+    describe('Model-based API Detection - 基于模型的API检测', () => {
+        it('QWen模型自动选择QWen API格式', () => {
+            const modelName = 'qwen-turbo';
+            const isQwen = modelName.toLowerCase().includes('qwen');
+            
+            assert.ok(isQwen);
+        });
+
+        it('GPT模型自动选择OpenAI API格式', () => {
+            const modelName = 'gpt-4';
+            const isOpenAI = modelName.toLowerCase().includes('gpt');
+            
+            assert.ok(isOpenAI);
+        });
+
+        it('自定义模型使用自定义API URL', () => {
+            const modelConfig = {
+                name: 'custom-llm',
+                apiUrl: 'https://custom-api.example.com/v1/chat'
+            };
+            
+            assert.ok(modelConfig.apiUrl);
+        });
+    });
 });
