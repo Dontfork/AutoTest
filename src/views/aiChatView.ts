@@ -208,6 +208,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 case 'switchSession':
                     this.aiChat.setCurrentSession(message.sessionId);
                     this.sendCurrentSession();
+                    this.sendSystemPrompt();
                     break;
                 case 'deleteSession':
                     this.aiChat.deleteSession(message.sessionId);
