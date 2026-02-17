@@ -174,9 +174,10 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         .toolbar button { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: transparent; color: #858585; border: none; cursor: pointer; transition: all 0.2s; }
         .toolbar button:hover { color: #cccccc; }
         .toolbar button svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.5; fill: none; }
-        .model-select { background: transparent; color: #cccccc; border: 1px solid #3c3c3c; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; min-width: 100px; }
-        .model-select:hover { border-color: #858585; }
-        .model-select:focus { outline: none; border-color: #0e639c; }
+        .model-select { background: transparent; color: #858585; border: none; border-bottom: 1px solid #3c3c3c; padding: 2px 0; font-size: 12px; cursor: pointer; min-width: 80px; }
+        .model-select:hover { color: #cccccc; border-bottom-color: #858585; }
+        .model-select:focus { outline: none; border-bottom-color: #858585; }
+        .model-select option { background: #1e1e1e; color: #cccccc; }
         .messages { flex: 1; overflow-y: auto; padding: 16px; }
         .msg { margin-bottom: 16px; display: flex; }
         .msg.user { justify-content: flex-end; }
