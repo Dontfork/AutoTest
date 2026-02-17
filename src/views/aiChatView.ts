@@ -10,10 +10,131 @@ marked.setOptions({
     breaks: true
 });
 
+function highlightCode(code: string, lang: string): string {
+    const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escaped = escapeHtml(code);
+    
+    if (!lang || lang === 'plaintext') {
+        return escaped;
+    }
+    
+    const patterns: { [key: string]: [RegExp, string][] } = {
+        javascript: [
+            [/\b(const|let|var|function|return|if|else|for|while|class|import|export|from|async|await|try|catch|throw|new|this|typeof|instanceof)\b/g, 'keyword'],
+            [/\b(true|false|null|undefined|NaN|Infinity)\b/g, 'literal'],
+            [/(['"`])(?:(?!\1)[^\\]|\\.)*?\1/g, 'string'],
+            [/\/\/.*$/gm, 'comment'],
+            [/(\/\*[\s\S]*?\*\/)/g, 'comment'],
+            [/\b(\d+\.?\d*)\b/g, 'number'],
+            [/\b([A-Z][a-zA-Z0-9]*)\b/g, 'class'],
+            [/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/g, 'function'],
+        ],
+        typescript: [
+            [/\b(const|let|var|function|return|if|else|for|while|class|import|export|from|async|await|try|catch|throw|new|this|typeof|instanceof|interface|type|enum|implements|extends|public|private|protected|readonly|abstract|static)\b/g, 'keyword'],
+            [/\b(true|false|null|undefined|NaN|Infinity)\b/g, 'literal'],
+            [/(['"`])(?:(?!\1)[^\\]|\\.)*?\1/g, 'string'],
+            [/\/\/.*$/gm, 'comment'],
+            [/(\/\*[\s\S]*?\*\/)/g, 'comment'],
+            [/\b(\d+\.?\d*)\b/g, 'number'],
+            [/\b([A-Z][a-zA-Z0-9]*)\b/g, 'class'],
+            [/\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/g, 'function'],
+        ],
+        python: [
+            [/\b(def|class|if|elif|else|for|while|return|import|from|as|try|except|finally|with|lambda|yield|raise|pass|break|continue|and|or|not|in|is|None|True|False)\b/g, 'keyword'],
+            [/(['"]{3}[\s\S]*?['"]{3}|['"][^'"]*['"])/g, 'string'],
+            [/#.*$/gm, 'comment'],
+            [/\b(\d+\.?\d*)\b/g, 'number'],
+            [/\b([A-Z][a-zA-Z0-9]*)\b/g, 'class'],
+            [/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g, 'function'],
+        ],
+        java: [
+            [/\b(public|private|protected|class|interface|extends|implements|return|if|else|for|while|try|catch|finally|throw|throws|new|this|super|static|final|abstract|void|int|long|short|byte|float|double|boolean|char|null|true|false|import|package)\b/g, 'keyword'],
+            [/(['"])(?:(?!\1)[^\\]|\\.)*?\1/g, 'string'],
+            [/\/\/.*$/gm, 'comment'],
+            [/(\/\*[\s\S]*?\*\/)/g, 'comment'],
+            [/\b(\d+\.?\d*[fFdDlL]?)\b/g, 'number'],
+            [/\b([A-Z][a-zA-Z0-9]*)\b/g, 'class'],
+            [/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g, 'function'],
+        ],
+        go: [
+            [/\b(package|import|func|return|if|else|for|range|switch|case|default|break|continue|go|defer|chan|select|struct|interface|map|type|var|const)\b/g, 'keyword'],
+            [/\b(true|false|nil)\b/g, 'literal'],
+            [/(['"`])(?:(?!\1)[^\\]|\\.)*?\1/g, 'string'],
+            [/\/\/.*$/gm, 'comment'],
+            [/(\/\*[\s\S]*?\*\/)/g, 'comment'],
+            [/\b(\d+\.?\d*)\b/g, 'number'],
+            [/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g, 'function'],
+        ],
+        rust: [
+            [/\b(fn|let|mut|const|pub|mod|use|struct|enum|impl|trait|where|type|self|Self|if|else|match|for|while|loop|break|continue|return|move|ref|as|in|unsafe|extern|crate|static|dyn)\b/g, 'keyword'],
+            [/\b(true|false|None|Some|Ok|Err)\b/g, 'literal'],
+            [/(['"`])(?:(?!\1)[^\\]|\\.)*?\1/g, 'string'],
+            [/\/\/.*$/gm, 'comment'],
+            [/(\/\*[\s\S]*?\*\/)/g, 'comment'],
+            [/\b(\d+\.?\d*)\b/g, 'number'],
+            [/\b([A-Z][a-zA-Z0-9]*)\b/g, 'class'],
+            [/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\()/g, 'function'],
+        ],
+        sql: [
+            [/\b(SELECT|FROM|WHERE|AND|OR|NOT|IN|LIKE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|GROUP|BY|ORDER|HAVING|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|DROP|ALTER|INDEX|PRIMARY|KEY|FOREIGN|REFERENCES|NULL|DEFAULT|UNIQUE|CHECK|CONSTRAINT)\b/gi, 'keyword'],
+            [/(['"])(?:(?!\1)[^\\]|\\.)*?\1/g, 'string'],
+            [/--.*$/gm, 'comment'],
+            [/\b(\d+\.?\d*)\b/g, 'number'],
+        ],
+        json: [
+            [/(['"])(?:(?!\1)[^\\]|\\.)*?\1(?=\s*:)/g, 'attribute'],
+            [/(['"])(?:(?!\1)[^\\]|\\.)*?\1/g, 'string'],
+            [/\b(true|false|null)\b/g, 'literal'],
+            [/\b(-?\d+\.?\d*)\b/g, 'number'],
+        ],
+        yaml: [
+            [/(['"])(?:(?!\1)[^\\]|\\.)*?\1/g, 'string'],
+            [/#.*$/gm, 'comment'],
+            [/\b(true|false|null|yes|no|on|off)\b/gi, 'literal'],
+            [/\b(-?\d+\.?\d*)\b/g, 'number'],
+            [/^(\s*)([a-zA-Z_][a-zA-Z0-9_]*)(?=\s*:)/gm, 'attribute'],
+        ],
+        bash: [
+            [/\b(if|then|else|elif|fi|for|while|do|done|case|esac|function|return|exit|break|continue|local|export|source|alias|unset|readonly|declare|typeset)\b/g, 'keyword'],
+            [/(['"])(?:(?!\1)[^\\]|\\.)*?\1/g, 'string'],
+            [/#.*$/gm, 'comment'],
+            [/\b(\d+)\b/g, 'number'],
+            [/\$([a-zA-Z_][a-zA-Z0-9_]*|\{[^}]+\}|\([^)]+\))/g, 'variable'],
+        ],
+        shell: [
+            [/\b(if|then|else|elif|fi|for|while|do|done|case|esac|function|return|exit|break|continue|local|export|source|alias|unset|readonly|declare|typeset)\b/g, 'keyword'],
+            [/(['"])(?:(?!\1)[^\\]|\\.)*?\1/g, 'string'],
+            [/#.*$/gm, 'comment'],
+            [/\b(\d+)\b/g, 'number'],
+            [/\$([a-zA-Z_][a-zA-Z0-9_]*|\{[^}]+\}|\([^)]+\))/g, 'variable'],
+        ],
+    };
+    
+    const langPatterns = patterns[lang.toLowerCase()] || patterns.javascript;
+    
+    let result = escaped;
+    const placeholders: { placeholder: string; html: string }[] = [];
+    
+    for (const [pattern, className] of langPatterns) {
+        result = result.replace(pattern, (match) => {
+            const placeholder = `__PLACEHOLDER_${placeholders.length}__`;
+            placeholders.push({ placeholder, html: `<span class="hljs-${className}">${match}</span>` });
+            return placeholder;
+        });
+    }
+    
+    for (const { placeholder, html } of placeholders) {
+        result = result.replace(placeholder, html);
+    }
+    
+    return result;
+}
+
 function enhanceMarkdown(html: string): string {
-    html = html.replace(/<pre><code(?: class="language-(\w+)")?>/g, (match, lang) => {
+    html = html.replace(/<pre><code(?: class="language-(\w+)")?>([\s\S]*?)<\/code><\/pre>/g, (match, lang, code) => {
         const langDisplay = lang ? `<span class="code-lang">${lang}</span>` : '';
-        return `<pre><div class="code-header">${langDisplay}<button class="copy-btn" title="复制代码"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div><code>`;
+        const highlightedCode = highlightCode(code, lang);
+        return `<pre><div class="code-header">${langDisplay}<button class="copy-btn" title="复制代码"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div><code>${highlightedCode}</code></pre>`;
     });
     
     html = html.replace(/<h([1-6])>/g, '<h$1 style="margin: 16px 0 8px 0; color: #e0e0e0; font-weight: 600;">');
@@ -296,6 +417,16 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         .bubble em { color: #d0d0d0; }
         .bubble hr { border: none; border-top: 1px solid #3c3c3c; margin: 16px 0; }
         .bubble img { max-width: 100%; border-radius: 4px; }
+        .hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-name, .hljs-tag { color: #569cd6; }
+        .hljs-string, .hljs-title, .hljs-section, .hljs-attribute, .hljs-literal, .hljs-template-tag, .hljs-template-variable, .hljs-type { color: #ce9178; }
+        .hljs-comment, .hljs-deletion { color: #6a9955; }
+        .hljs-number, .hljs-regexp, .hljs-addition { color: #b5cea8; }
+        .hljs-function { color: #dcdcaa; }
+        .hljs-variable, .hljs-params { color: #9cdcfe; }
+        .hljs-class .hljs-title { color: #4ec9b0; }
+        .hljs-symbol, .hljs-bullet { color: #d4d4d4; }
+        .hljs-meta { color: #808080; }
+        .hljs-link { color: #3794ff; text-decoration: underline; }
         .input-area { padding: 10px 12px; border-top: 1px solid #3c3c3c; background: transparent; overflow: hidden; }
         .input-wrap { display: flex; gap: 8px; align-items: flex-end; overflow: hidden; }
         textarea { flex: 1; padding: 4px 0 3px 0; background: transparent; color: #cccccc; border: none; border-bottom: 1px solid #3c3c3c; resize: none; font-family: inherit; font-size: 14px; line-height: 18px; height: 25px; -webkit-appearance: none; appearance: none; overflow: hidden; }
@@ -494,6 +625,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             const text = input.value.trim();
             if (!text) return;
             systemPrompt = promptInput.value.trim();
+            vscode.postMessage({ command: 'saveSystemPrompt', prompt: systemPrompt });
             addMessage('user', escapeHtml(text));
             input.value = '';
             sendBtn.disabled = true;
