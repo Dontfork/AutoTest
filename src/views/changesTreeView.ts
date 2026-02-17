@@ -156,6 +156,7 @@ export class ChangesTreeView {
             treeDataProvider: this.treeProvider,
             showCollapseAll: true
         });
+        vscode.commands.executeCommand('workbench.actions.treeView.autotestChanges.collapseAll');
     }
 
     refresh(): void {

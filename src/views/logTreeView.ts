@@ -158,6 +158,7 @@ export class LogTreeView {
             treeDataProvider: this.treeProvider,
             showCollapseAll: true
         });
+        vscode.commands.executeCommand('workbench.actions.treeView.autotestLogs.collapseAll');
     }
 
     start(): void {

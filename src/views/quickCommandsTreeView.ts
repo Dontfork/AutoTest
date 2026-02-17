@@ -99,6 +99,7 @@ export class QuickCommandsTreeView {
             treeDataProvider: this.treeProvider,
             showCollapseAll: true
         });
+        vscode.commands.executeCommand('workbench.actions.treeView.autotestQuickCommands.collapseAll');
     }
 
     refresh(): void {
