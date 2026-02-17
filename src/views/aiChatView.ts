@@ -502,7 +502,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 <option value="">加载中...</option>
             </select>
         </div>
-        <div id="promptArea" class="prompt-area" style="padding: 0; border: none;">
+        <div id="promptArea" class="prompt-area prompt-collapsed" style="padding: 0; border: none;">
             <div class="prompt-header" style="margin-bottom: 4px;">
                 <span class="prompt-label">提示词</span>
                 <div class="prompt-actions">
