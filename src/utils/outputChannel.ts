@@ -8,8 +8,7 @@ export enum OutputChannelType {
 export class OutputChannelManager {
     private static instance: OutputChannelManager;
     private logChannel: vscode.LogOutputChannel | null = null;
-    private outputChannel: vscode.OutputChannel | null = null;
-    private terminal: vscode.Terminal | null = null;
+    private testOutputChannel: vscode.LogOutputChannel | null = null;
 
     private constructor() {}
 
@@ -27,31 +26,11 @@ export class OutputChannelManager {
         return this.logChannel;
     }
 
-    getTestOutputChannel(): vscode.OutputChannel {
-        if (!this.outputChannel) {
-            this.outputChannel = vscode.window.createOutputChannel('TestOutput');
+    getTestOutputChannel(): vscode.LogOutputChannel {
+        if (!this.testOutputChannel) {
+            this.testOutputChannel = vscode.window.createOutputChannel('TestOutput', { log: true });
         }
-        return this.outputChannel;
-    }
-
-    getTerminal(): vscode.Terminal {
-        if (!this.terminal || this.terminal.exitStatus !== undefined) {
-            this.terminal = vscode.window.createTerminal({
-                name: 'AutoTest Output',
-                iconPath: new vscode.ThemeIcon('terminal')
-            });
-        }
-        return this.terminal;
-    }
-
-    showTerminal(): void {
-        this.getTerminal().show();
-    }
-
-    sendToTerminal(command: string): void {
-        const terminal = this.getTerminal();
-        terminal.show();
-        terminal.sendText(command, true);
+        return this.testOutputChannel;
     }
 
     dispose(): void {
@@ -59,13 +38,9 @@ export class OutputChannelManager {
             this.logChannel.dispose();
             this.logChannel = null;
         }
-        if (this.outputChannel) {
-            this.outputChannel.dispose();
-            this.outputChannel = null;
-        }
-        if (this.terminal) {
-            this.terminal.dispose();
-            this.terminal = null;
+        if (this.testOutputChannel) {
+            this.testOutputChannel.dispose();
+            this.testOutputChannel = null;
         }
     }
 }

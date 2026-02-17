@@ -7,7 +7,7 @@ import { getOutputChannelManager } from '../utils/outputChannel';
 
 export class CommandExecutor {
     private pluginChannel: vscode.LogOutputChannel;
-    private testOutputChannel: vscode.OutputChannel;
+    private testOutputChannel: vscode.LogOutputChannel;
 
     constructor() {
         const channelManager = getOutputChannelManager();
@@ -49,7 +49,7 @@ export class CommandExecutor {
         return this.pluginChannel;
     }
 
-    getTestOutputChannel(): vscode.OutputChannel {
+    getTestOutputChannel(): vscode.LogOutputChannel {
         return this.testOutputChannel;
     }
 
