@@ -208,7 +208,6 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 case 'switchSession':
                     this.aiChat.setCurrentSession(message.sessionId);
                     this.sendCurrentSession();
-                    this.sendSystemPrompt();
                     break;
                 case 'deleteSession':
                     this.aiChat.deleteSession(message.sessionId);
@@ -599,7 +598,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 messages.innerHTML = '<div class="welcome"><h2>AutoTest AI 助手</h2><p>输入问题开始对话</p></div>';
                 return;
             }
-            msgs.forEach(m => {
+            msgs.filter(m => m.role !== 'system').forEach(m => {
                 if (m.role === 'assistant' && m.renderedContent) {
                     addMessage(m.role, m.renderedContent, true);
                 } else if (m.role === 'assistant') {
