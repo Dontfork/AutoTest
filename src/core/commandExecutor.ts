@@ -36,7 +36,7 @@ export class CommandExecutor {
         }
         
         const config = getConfig();
-        const clearOutput = config.clearOutputBeforeRun ?? false;
+        const clearOutput = config.clearOutputBeforeRun ?? true;
         
         try {
             const result = await executeRemoteCommand(

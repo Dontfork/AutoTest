@@ -238,7 +238,7 @@ export class FileUploader {
         this.testOutputChannel.info(`[${project.name}] ${finalCommand}`);
         
         const config = getConfig();
-        const clearOutput = config.clearOutputBeforeRun ?? false;
+        const clearOutput = config.clearOutputBeforeRun ?? true;
         
         const result = await executeRemoteCommand(
             finalCommand, 

@@ -270,7 +270,7 @@ export function loadConfig(workspacePath: string): AutoTestConfig {
                 ai: deepMerge(defaultAIConfig, finalConfig.ai || {}),
                 refreshInterval: finalConfig.refreshInterval ?? 0,
                 textFileExtensions: finalConfig.textFileExtensions,
-                clearOutputBeforeRun: finalConfig.clearOutputBeforeRun
+                clearOutputBeforeRun: finalConfig.clearOutputBeforeRun ?? true
             };
         } else {
             config = convertLegacyConfig(loadedConfig, workspacePath);

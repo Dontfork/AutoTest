@@ -121,7 +121,7 @@ export class QuickCommandsTreeView {
         const cmd = item.quickCommand;
         const project = cmd.project;
         const config = getConfig();
-        const clearOutput = config.clearOutputBeforeRun ?? false;
+        const clearOutput = config.clearOutputBeforeRun ?? true;
 
         try {
             await vscode.window.withProgress({
