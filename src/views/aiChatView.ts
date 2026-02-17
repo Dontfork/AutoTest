@@ -11,8 +11,10 @@ marked.setOptions({
 });
 
 function highlightCode(code: string, lang: string): string {
+    const decodeHtml = (text: string) => text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'");
     const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const escaped = escapeHtml(code);
+    const decoded = decodeHtml(code);
+    const escaped = escapeHtml(decoded);
     
     if (!lang || lang === 'plaintext') {
         return escaped;
