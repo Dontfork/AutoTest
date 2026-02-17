@@ -7,25 +7,7 @@ import {
     filterCommandOutput, 
     stripAnsiEscapeCodes
 } from '../utils/outputFilter';
-
-type LogOutputChannel = vscode.LogOutputChannel;
-
-function getLogLevel(line: string): 'info' | 'warn' | 'error' | 'trace' {
-    const lowerLine = line.toLowerCase();
-    if (lowerLine.includes('[error]') || lowerLine.includes('[err]') || 
-        lowerLine.includes('error:') || lowerLine.includes('exception') ||
-        lowerLine.includes('failed') || lowerLine.includes('failure')) {
-        return 'error';
-    }
-    if (lowerLine.includes('[warn]') || lowerLine.includes('[warning]') ||
-        lowerLine.includes('warn:') || lowerLine.includes('warning:')) {
-        return 'warn';
-    }
-    if (lowerLine.includes('[debug]') || lowerLine.includes('[trace]')) {
-        return 'trace';
-    }
-    return 'info';
-}
+import { getOutputChannelManager } from '../utils/outputChannel';
 
 export class SSHClient {
     private client: Client | null = null;
@@ -106,12 +88,78 @@ export class SSHClient {
     }
 }
 
+export interface ExecuteResult {
+    stdout: string;
+    stderr: string;
+    code: number;
+    filteredOutput: string;
+}
+
+export interface ExecuteOptions {
+    outputChannel?: vscode.OutputChannel;
+    serverConfig?: ServerConfig;
+    commandConfig?: Partial<CommandConfig>;
+    useTerminal?: boolean;
+}
+
 export async function executeRemoteCommand(
     command: string,
-    outputChannel?: LogOutputChannel,
+    outputChannel?: vscode.OutputChannel,
     serverConfig?: ServerConfig,
     commandConfig?: Partial<CommandConfig>
-): Promise<{ stdout: string; stderr: string; code: number; filteredOutput: string }> {
+): Promise<ExecuteResult> {
+    const config = getConfig();
+    const outputMode = config.outputMode || 'channel';
+    
+    if (outputMode === 'terminal') {
+        return executeInTerminal(command, serverConfig);
+    }
+    
+    return executeWithChannel(command, outputChannel, serverConfig, commandConfig);
+}
+
+async function executeInTerminal(
+    command: string,
+    serverConfig?: ServerConfig
+): Promise<ExecuteResult> {
+    const finalServerConfig = serverConfig || (() => {
+        const config = getConfig();
+        if (config.projects && config.projects.length > 0 && config.projects[0].enabled !== false) {
+            return config.projects[0].server;
+        }
+        throw new Error('未配置服务器信息');
+    })();
+
+    const fullCommand = finalServerConfig.remoteDirectory 
+        ? `cd ${finalServerConfig.remoteDirectory} && ${command}`
+        : command;
+
+    const sshCommand = `ssh ${finalServerConfig.username}@${finalServerConfig.host} -p ${finalServerConfig.port} "${fullCommand}"`;
+    
+    const channelManager = getOutputChannelManager();
+    const terminal = channelManager.getTerminal();
+    
+    terminal.show();
+    terminal.sendText(`echo "┌─ 执行命令 ${'─'.repeat(48)}"`, true);
+    terminal.sendText(`echo "│ ${finalServerConfig.username}@${finalServerConfig.host}:${finalServerConfig.port}"`, true);
+    terminal.sendText(`echo "│ ${fullCommand}"`, true);
+    terminal.sendText(`echo "├─ 输出 ${'─'.repeat(52)}"`, true);
+    terminal.sendText(sshCommand, true);
+    
+    return {
+        stdout: '',
+        stderr: '',
+        code: 0,
+        filteredOutput: ''
+    };
+}
+
+async function executeWithChannel(
+    command: string,
+    outputChannel?: vscode.OutputChannel,
+    serverConfig?: ServerConfig,
+    commandConfig?: Partial<CommandConfig>
+): Promise<ExecuteResult> {
     const sshClient = new SSHClient(serverConfig);
     
     try {
@@ -137,10 +185,10 @@ export async function executeRemoteCommand(
                 : command;
             
             if (outputChannel) {
-                outputChannel.info('');
-                outputChannel.info(`┌─ 执行命令 ${'─'.repeat(48)}`);
-                outputChannel.info(`│ ${finalServerConfig.username}@${finalServerConfig.host}:${finalServerConfig.port}`);
-                outputChannel.info(`│ ${fullCommand}`);
+                outputChannel.appendLine('');
+                outputChannel.appendLine(`┌─ 执行命令 ${'─'.repeat(48)}`);
+                outputChannel.appendLine(`│ ${finalServerConfig.username}@${finalServerConfig.host}:${finalServerConfig.port}`);
+                outputChannel.appendLine(`│ ${fullCommand}`);
             }
 
             client.exec(fullCommand, (err, stream) => {
@@ -157,34 +205,16 @@ export async function executeRemoteCommand(
                     const filteredOutput = filterCommandOutput(cleanOutput, includePatterns, excludePatterns);
                     
                     if (outputChannel) {
-                        outputChannel.info(`├─ 输出 ${'─'.repeat(52)}`);
+                        outputChannel.appendLine(`├─ 输出 ${'─'.repeat(52)}`);
                         
                         const lines = filteredOutput.split('\n');
                         for (const line of lines) {
                             if (line.trim()) {
-                                const level = getLogLevel(line);
-                                const prefix = '│ ';
-                                switch (level) {
-                                    case 'error':
-                                        outputChannel.error(prefix + line);
-                                        break;
-                                    case 'warn':
-                                        outputChannel.warn(prefix + line);
-                                        break;
-                                    case 'trace':
-                                        outputChannel.trace(prefix + line);
-                                        break;
-                                    default:
-                                        outputChannel.info(prefix + line);
-                                }
+                                outputChannel.appendLine(`│ ${line}`);
                             }
                         }
                         
-                        if (code === 0) {
-                            outputChannel.info(`└─ 完成 (退出码: ${code}) ${'─'.repeat(42)}`);
-                        } else {
-                            outputChannel.error(`└─ 完成 (退出码: ${code}) ${'─'.repeat(42)}`);
-                        }
+                        outputChannel.appendLine(`└─ 完成 (退出码: ${code}) ${'─'.repeat(42)}`);
                         outputChannel.show();
                     }
                     

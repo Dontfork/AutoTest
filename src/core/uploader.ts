@@ -10,7 +10,7 @@ import { ProjectConfig, CommandConfig } from '../types';
 export class FileUploader {
     private commandExecutor: CommandExecutor;
     private pluginChannel: vscode.LogOutputChannel;
-    private testOutputChannel: vscode.LogOutputChannel;
+    private testOutputChannel: vscode.OutputChannel;
     private onTestCaseComplete: (() => void) | null = null;
 
     constructor(commandExecutor: CommandExecutor) {
@@ -230,7 +230,7 @@ export class FileUploader {
         
         const finalCommand = replaceCommandVariables(command.executeCommand, variables);
         
-        this.testOutputChannel.info(`[${project.name}] ${finalCommand}`);
+        this.testOutputChannel.appendLine(`[${project.name}] ${finalCommand}`);
         
         const result = await executeRemoteCommand(
             finalCommand, 
@@ -244,7 +244,7 @@ export class FileUploader {
         );
         
         if (result.code !== 0) {
-            this.testOutputChannel.warn(`[警告] 退出码: ${result.code}`);
+            this.testOutputChannel.appendLine(`[警告] 退出码: ${result.code}`);
         }
     }
 
