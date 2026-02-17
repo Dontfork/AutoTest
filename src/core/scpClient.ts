@@ -6,6 +6,39 @@ import { getConfig } from '../config';
 import { LogFile, ServerConfig } from '../types';
 import { ConnectionPool } from './connectionPool';
 
+const TEXT_FILE_EXTENSIONS = [
+    '.txt', '.md', '.json', '.xml', '.html', '.css', '.js', '.ts', '.jsx', '.tsx',
+    '.py', '.java', '.c', '.cpp', '.h', '.hpp', '.cs', '.go', '.rs', '.rb', '.php',
+    '.sh', '.bash', '.zsh', '.yml', '.yaml', '.toml', '.ini', '.conf', '.cfg',
+    '.sql', '.vue', '.svelte', '.scss', '.sass', '.less', '.env', '.gitignore',
+    '.dockerignore', '.editorconfig', '.eslintrc', '.prettierrc', '.babelrc',
+    '.properties', '.gradle', '.m', '.swift', '.kt', '.scala', '.lua', '.pl',
+    '.r', '.rmd', '.csv', '.tsv', '.log', '.awk', '.sed'
+];
+
+function isTextFile(filePath: string): boolean {
+    const ext = path.extname(filePath).toLowerCase();
+    if (TEXT_FILE_EXTENSIONS.includes(ext)) {
+        return true;
+    }
+    const fileName = path.basename(filePath).toLowerCase();
+    const textFileNames = [
+        '.gitignore', '.dockerignore', '.editorconfig', '.eslintrc', '.prettierrc',
+        '.babelrc', 'license', 'readme', 'changelog', 'makefile', 'dockerfile',
+        'vagrantfile', 'gemfile', 'rakefile', 'procfile'
+    ];
+    if (textFileNames.some(name => fileName === name || fileName.startsWith(name + '.'))) {
+        return true;
+    }
+    return false;
+}
+
+function convertCrlfToLf(content: Buffer): Buffer {
+    const text = content.toString('utf8');
+    const converted = text.replace(/\r\n/g, '\n');
+    return Buffer.from(converted, 'utf8');
+}
+
 export class SCPClient {
     private serverConfig: ServerConfig | null = null;
     private usePool: boolean = true;
@@ -92,7 +125,13 @@ export class SCPClient {
         } catch {
         }
 
-        await sftp.fastPut(localPath, remotePath);
+        if (isTextFile(localPath)) {
+            const content = fs.readFileSync(localPath);
+            const convertedContent = convertCrlfToLf(content);
+            await sftp.put(convertedContent, remotePath);
+        } else {
+            await sftp.fastPut(localPath, remotePath);
+        }
         return remotePath;
     }
 
