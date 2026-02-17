@@ -258,6 +258,30 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             
             assert.ok(result.warnings.some((w: string) => w.includes('models') && w.includes('空')));
         });
+
+        it('验证旧AI配置格式 - 应给出迁移警告', () => {
+            const config: any = {
+                projects: [{
+                    name: 'TestProject',
+                    localPath: '/path/to/project',
+                    server: {
+                        host: '192.168.1.1',
+                        port: 22,
+                        username: 'user',
+                        password: 'pass',
+                        remoteDirectory: '/home/user'
+                    }
+                }],
+                ai: {
+                    provider: 'qwen',
+                    qwen: { apiKey: 'test-key' },
+                    openai: { apiKey: '' }
+                }
+            };
+            const result = validateConfig(config);
+            
+            assert.ok(result.warnings.some((w: string) => w.includes('provider/qwen/openai') && w.includes('迁移')));
+        });
     });
 
     describe('命令和日志配置验证 - Commands and Logs Validation', () => {

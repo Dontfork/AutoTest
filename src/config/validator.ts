@@ -284,6 +284,11 @@ export function validateConfig(config: any): ConfigValidationResult {
     if (!config.ai || typeof config.ai !== 'object') {
         warnings.push('配置文件缺少 "ai" 配置，将使用默认 AI 配置');
     } else {
+        if (config.ai.provider || config.ai.qwen || config.ai.openai) {
+            warnings.push('AI 配置格式已更新，请将旧格式（provider/qwen/openai）迁移为新格式（models 数组）。' +
+                '新格式示例: {"models": [{"name": "qwen-turbo", "apiKey": "your-key"}], "defaultModel": "qwen-turbo"}');
+        }
+
         unknownKeys.push(...checkUnknownKeys(config.ai, VALID_AI_KEYS, 'ai'));
 
         if (!config.ai.models || !Array.isArray(config.ai.models)) {
