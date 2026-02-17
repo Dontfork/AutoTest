@@ -16,7 +16,7 @@ interface RawGitChange {
 }
 
 export class GitChangeDetector {
-    private outputChannel: vscode.OutputChannel;
+    private outputChannel: vscode.LogOutputChannel;
 
     constructor() {
         this.outputChannel = getOutputChannelManager().getAutoTestChannel();
@@ -136,12 +136,12 @@ export class GitChangeDetector {
             const changesWithRenameDetection = await this.detectRenamesByContent(changes, localPath);
             
             if (changesWithRenameDetection.length > 0) {
-                this.outputChannel.appendLine(`[${project.name}] 检测到 ${changesWithRenameDetection.length} 个文件变更`);
+                this.outputChannel.info(`[${project.name}] 检测到 ${changesWithRenameDetection.length} 个文件变更`);
             }
 
             return changesWithRenameDetection;
         } catch (error: any) {
-            this.outputChannel.appendLine(`[${project.name}] Git检测错误: ${error.message}`);
+            this.outputChannel.error(`[${project.name}] Git检测错误: ${error.message}`);
             return [];
         }
     }

@@ -9,8 +9,8 @@ import { ProjectConfig, CommandConfig } from '../types';
 
 export class FileUploader {
     private commandExecutor: CommandExecutor;
-    private pluginChannel: vscode.OutputChannel;
-    private testOutputChannel: vscode.OutputChannel;
+    private pluginChannel: vscode.LogOutputChannel;
+    private testOutputChannel: vscode.LogOutputChannel;
     private onTestCaseComplete: (() => void) | null = null;
 
     constructor(commandExecutor: CommandExecutor) {
@@ -142,7 +142,7 @@ export class FileUploader {
                 this.onTestCaseComplete();
             }
         } catch (error: any) {
-            this.pluginChannel.appendLine(`[错误] ${error.message}`);
+            this.pluginChannel.error(`[错误] ${error.message}`);
             this.pluginChannel.show();
             vscode.window.showErrorMessage(`操作失败: ${error.message}`);
             throw error;
@@ -201,7 +201,7 @@ export class FileUploader {
                 this.onTestCaseComplete();
             }
         } catch (error: any) {
-            this.pluginChannel.appendLine(`[错误] ${error.message}`);
+            this.pluginChannel.error(`[错误] ${error.message}`);
             this.pluginChannel.show();
             vscode.window.showErrorMessage(`操作失败: ${error.message}`);
             throw error;
@@ -230,7 +230,7 @@ export class FileUploader {
         
         const finalCommand = replaceCommandVariables(command.executeCommand, variables);
         
-        this.testOutputChannel.appendLine(`[${project.name}] ${finalCommand}`);
+        this.testOutputChannel.info(`[${project.name}] ${finalCommand}`);
         
         const result = await executeRemoteCommand(
             finalCommand, 
@@ -244,7 +244,7 @@ export class FileUploader {
         );
         
         if (result.code !== 0) {
-            this.testOutputChannel.appendLine(`[警告] 退出码: ${result.code}`);
+            this.testOutputChannel.warn(`[警告] 退出码: ${result.code}`);
         }
     }
 
@@ -309,7 +309,7 @@ export class FileUploader {
                 }
             });
         } catch (error: any) {
-            this.pluginChannel.appendLine(`[上传失败] ${error.message}`);
+            this.pluginChannel.error(`[上传失败] ${error.message}`);
             this.pluginChannel.show();
             vscode.window.showErrorMessage(`上传失败: ${error.message}`);
             throw error;
@@ -382,7 +382,7 @@ export class FileUploader {
                 }
             });
         } catch (error: any) {
-            this.pluginChannel.appendLine(`[同步失败] ${error.message}`);
+            this.pluginChannel.error(`[同步失败] ${error.message}`);
             this.pluginChannel.show();
             vscode.window.showErrorMessage(`同步失败: ${error.message}`);
             throw error;

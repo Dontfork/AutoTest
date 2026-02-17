@@ -86,8 +86,8 @@ export class QuickCommandsTreeView {
     private treeProvider: QuickCommandsTreeProvider;
     private treeView: vscode.TreeView<QuickCommandItem>;
     private detector: QuickCommandDetector;
-    private pluginChannel: vscode.OutputChannel;
-    private testOutputChannel: vscode.OutputChannel;
+    private pluginChannel: vscode.LogOutputChannel;
+    private testOutputChannel: vscode.LogOutputChannel;
 
     constructor() {
         this.detector = new QuickCommandDetector();

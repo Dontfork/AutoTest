@@ -8,6 +8,25 @@ import {
     stripAnsiEscapeCodes
 } from '../utils/outputFilter';
 
+type LogOutputChannel = vscode.LogOutputChannel;
+
+function getLogLevel(line: string): 'info' | 'warn' | 'error' | 'trace' {
+    const lowerLine = line.toLowerCase();
+    if (lowerLine.includes('[error]') || lowerLine.includes('[err]') || 
+        lowerLine.includes('error:') || lowerLine.includes('exception') ||
+        lowerLine.includes('failed') || lowerLine.includes('failure')) {
+        return 'error';
+    }
+    if (lowerLine.includes('[warn]') || lowerLine.includes('[warning]') ||
+        lowerLine.includes('warn:') || lowerLine.includes('warning:')) {
+        return 'warn';
+    }
+    if (lowerLine.includes('[debug]') || lowerLine.includes('[trace]')) {
+        return 'trace';
+    }
+    return 'info';
+}
+
 export class SSHClient {
     private client: Client | null = null;
     private connected: boolean = false;
@@ -89,7 +108,7 @@ export class SSHClient {
 
 export async function executeRemoteCommand(
     command: string,
-    outputChannel?: vscode.OutputChannel,
+    outputChannel?: LogOutputChannel,
     serverConfig?: ServerConfig,
     commandConfig?: Partial<CommandConfig>
 ): Promise<{ stdout: string; stderr: string; code: number; filteredOutput: string }> {
@@ -118,10 +137,10 @@ export async function executeRemoteCommand(
                 : command;
             
             if (outputChannel) {
-                outputChannel.appendLine('');
-                outputChannel.appendLine(`┌─ 执行命令 ${'─'.repeat(48)}`);
-                outputChannel.appendLine(`│ ${finalServerConfig.username}@${finalServerConfig.host}:${finalServerConfig.port}`);
-                outputChannel.appendLine(`│ ${fullCommand}`);
+                outputChannel.info('');
+                outputChannel.info(`┌─ 执行命令 ${'─'.repeat(48)}`);
+                outputChannel.info(`│ ${finalServerConfig.username}@${finalServerConfig.host}:${finalServerConfig.port}`);
+                outputChannel.info(`│ ${fullCommand}`);
             }
 
             client.exec(fullCommand, (err, stream) => {
@@ -138,16 +157,34 @@ export async function executeRemoteCommand(
                     const filteredOutput = filterCommandOutput(cleanOutput, includePatterns, excludePatterns);
                     
                     if (outputChannel) {
-                        outputChannel.appendLine(`├─ 输出 ${'─'.repeat(52)}`);
+                        outputChannel.info(`├─ 输出 ${'─'.repeat(52)}`);
                         
                         const lines = filteredOutput.split('\n');
                         for (const line of lines) {
                             if (line.trim()) {
-                                outputChannel.appendLine(`│ ${line}`);
+                                const level = getLogLevel(line);
+                                const prefix = '│ ';
+                                switch (level) {
+                                    case 'error':
+                                        outputChannel.error(prefix + line);
+                                        break;
+                                    case 'warn':
+                                        outputChannel.warn(prefix + line);
+                                        break;
+                                    case 'trace':
+                                        outputChannel.trace(prefix + line);
+                                        break;
+                                    default:
+                                        outputChannel.info(prefix + line);
+                                }
                             }
                         }
                         
-                        outputChannel.appendLine(`└─ 完成 (退出码: ${code}) ${'─'.repeat(42)}`);
+                        if (code === 0) {
+                            outputChannel.info(`└─ 完成 (退出码: ${code}) ${'─'.repeat(42)}`);
+                        } else {
+                            outputChannel.error(`└─ 完成 (退出码: ${code}) ${'─'.repeat(42)}`);
+                        }
                         outputChannel.show();
                     }
                     

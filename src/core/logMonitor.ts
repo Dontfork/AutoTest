@@ -9,7 +9,7 @@ import { getOutputChannelManager } from '../utils/outputChannel';
 
 function log(message: string): void {
     const channel = getOutputChannelManager().getAutoTestChannel();
-    channel.appendLine(`[LogMonitor] ${message}`);
+    channel.info(`[LogMonitor] ${message}`);
 }
 
 export class LogMonitor {

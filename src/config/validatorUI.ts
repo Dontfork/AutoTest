@@ -9,14 +9,14 @@ export function showValidationMessages(result: ConfigValidationResult): void {
         vscode.window.showErrorMessage(errorMessage, '查看详情').then(selection => {
             if (selection === '查看详情') {
                 const outputChannel = getOutputChannelManager().getAutoTestChannel();
-                outputChannel.appendLine('');
-                outputChannel.appendLine('配置验证结果');
-                outputChannel.appendLine('─'.repeat(50));
-                outputChannel.appendLine('错误:');
-                result.errors.forEach((err, i) => outputChannel.appendLine(`  ${i + 1}. ${err}`));
+                outputChannel.info('');
+                outputChannel.info('配置验证结果');
+                outputChannel.info('─'.repeat(50));
+                outputChannel.error('错误:');
+                result.errors.forEach((err, i) => outputChannel.error(`  ${i + 1}. ${err}`));
                 if (result.warnings.length > 0) {
-                    outputChannel.appendLine('警告:');
-                    result.warnings.forEach((warn, i) => outputChannel.appendLine(`  ${i + 1}. ${warn}`));
+                    outputChannel.warn('警告:');
+                    result.warnings.forEach((warn, i) => outputChannel.warn(`  ${i + 1}. ${warn}`));
                 }
                 outputChannel.show();
             }

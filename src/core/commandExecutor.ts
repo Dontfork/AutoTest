@@ -6,8 +6,8 @@ import { CommandConfig, CommandVariables } from '../types';
 import { getOutputChannelManager } from '../utils/outputChannel';
 
 export class CommandExecutor {
-    private pluginChannel: vscode.OutputChannel;
-    private testOutputChannel: vscode.OutputChannel;
+    private pluginChannel: vscode.LogOutputChannel;
+    private testOutputChannel: vscode.LogOutputChannel;
 
     constructor() {
         const channelManager = getOutputChannelManager();
@@ -39,17 +39,17 @@ export class CommandExecutor {
             );
             return result.filteredOutput;
         } catch (error: any) {
-            this.pluginChannel.appendLine(`[执行错误] ${error.message}`);
+            this.pluginChannel.error(`[执行错误] ${error.message}`);
             this.pluginChannel.show();
             throw error;
         }
     }
 
-    getPluginChannel(): vscode.OutputChannel {
+    getPluginChannel(): vscode.LogOutputChannel {
         return this.pluginChannel;
     }
 
-    getTestOutputChannel(): vscode.OutputChannel {
+    getTestOutputChannel(): vscode.LogOutputChannel {
         return this.testOutputChannel;
     }
 
@@ -63,8 +63,8 @@ export class CommandExecutor {
     }
 
     dispose(): void {
-        this.pluginChannel.dispose();
-        this.testOutputChannel.dispose();
+        const channelManager = getOutputChannelManager();
+        channelManager.dispose();
     }
 }
 

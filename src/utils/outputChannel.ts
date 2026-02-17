@@ -7,7 +7,8 @@ export enum OutputChannelType {
 
 export class OutputChannelManager {
     private static instance: OutputChannelManager;
-    private channels: Map<OutputChannelType, vscode.OutputChannel>;
+    private channels: Map<OutputChannelType, vscode.LogOutputChannel>;
+    private terminal: vscode.Terminal | null = null;
 
     private constructor() {
         this.channels = new Map();
@@ -20,20 +21,40 @@ export class OutputChannelManager {
         return OutputChannelManager.instance;
     }
 
-    getChannel(type: OutputChannelType): vscode.OutputChannel {
+    getChannel(type: OutputChannelType): vscode.LogOutputChannel {
         if (!this.channels.has(type)) {
-            const channel = vscode.window.createOutputChannel(type);
+            const channel = vscode.window.createOutputChannel(type, { log: true });
             this.channels.set(type, channel);
         }
         return this.channels.get(type)!;
     }
 
-    getAutoTestChannel(): vscode.OutputChannel {
+    getAutoTestChannel(): vscode.LogOutputChannel {
         return this.getChannel(OutputChannelType.AUTO_TEST);
     }
 
-    getTestOutputChannel(): vscode.OutputChannel {
+    getTestOutputChannel(): vscode.LogOutputChannel {
         return this.getChannel(OutputChannelType.TEST_OUTPUT);
+    }
+
+    getTerminal(): vscode.Terminal {
+        if (!this.terminal || this.terminal.exitStatus !== undefined) {
+            this.terminal = vscode.window.createTerminal({
+                name: 'AutoTest Output',
+                iconPath: new vscode.ThemeIcon('terminal')
+            });
+        }
+        return this.terminal;
+    }
+
+    showTerminal(): void {
+        this.getTerminal().show();
+    }
+
+    sendToTerminal(command: string): void {
+        const terminal = this.getTerminal();
+        terminal.show();
+        terminal.sendText(command, true);
     }
 
     appendLine(message: string, type: OutputChannelType = OutputChannelType.AUTO_TEST): void {
@@ -52,11 +73,27 @@ export class OutputChannelManager {
         this.getChannel(type).clear();
     }
 
+    info(message: string, type: OutputChannelType = OutputChannelType.TEST_OUTPUT): void {
+        this.getChannel(type).info(message);
+    }
+
+    warn(message: string, type: OutputChannelType = OutputChannelType.TEST_OUTPUT): void {
+        this.getChannel(type).warn(message);
+    }
+
+    error(message: string, type: OutputChannelType = OutputChannelType.TEST_OUTPUT): void {
+        this.getChannel(type).error(message);
+    }
+
     dispose(): void {
         for (const channel of this.channels.values()) {
             channel.dispose();
         }
         this.channels.clear();
+        if (this.terminal) {
+            this.terminal.dispose();
+            this.terminal = null;
+        }
     }
 }
 
