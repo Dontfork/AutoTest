@@ -166,6 +166,17 @@ async function executeInTerminal(
         const includePatterns = commandConfig?.includePatterns || [];
         const excludePatterns = commandConfig?.excludePatterns || [];
 
+        function escapeForPowerShell(text: string): string {
+            return text
+                .replace(/'/g, "''")
+                .replace(/`/g, '``')
+                .replace(/\$/g, '`$');
+        }
+
+        function printToTerminal(text: string): void {
+            terminal.sendText(`Write-Host '${escapeForPowerShell(text)}'`);
+        }
+
         return new Promise((resolve, reject) => {
             let stdout = '';
             let stderr = '';
@@ -175,14 +186,14 @@ async function executeInTerminal(
                 ? `cd ${finalServerConfig.remoteDirectory} && ${command}`
                 : command;
             
-            terminal.sendText(`${ANSI.cyan}┌─ 执行命令 ${'─'.repeat(48)}${ANSI.reset}`);
-            terminal.sendText(`${ANSI.cyan}│ ${ANSI.green}${finalServerConfig.username}@${finalServerConfig.host}:${finalServerConfig.port}${ANSI.reset}`);
-            terminal.sendText(`${ANSI.cyan}│ ${ANSI.yellow}${fullCommand}${ANSI.reset}`);
-            terminal.sendText(`${ANSI.cyan}├─ 输出 ${'─'.repeat(52)}${ANSI.reset}`);
+            printToTerminal(`${ANSI.cyan}┌─ 执行命令 ${'─'.repeat(48)}${ANSI.reset}`);
+            printToTerminal(`${ANSI.cyan}│ ${ANSI.green}${finalServerConfig.username}@${finalServerConfig.host}:${finalServerConfig.port}${ANSI.reset}`);
+            printToTerminal(`${ANSI.cyan}│ ${ANSI.yellow}${fullCommand}${ANSI.reset}`);
+            printToTerminal(`${ANSI.cyan}├─ 输出 ${'─'.repeat(52)}${ANSI.reset}`);
 
             client.exec(fullCommand, (err, stream) => {
                 if (err) {
-                    terminal.sendText(`${ANSI.red}└─ 命令执行失败: ${err.message}${ANSI.reset}`);
+                    printToTerminal(`${ANSI.red}└─ 命令执行失败: ${err.message}${ANSI.reset}`);
                     reject(new Error(`命令执行失败: ${err.message}`));
                     return;
                 }
@@ -191,9 +202,9 @@ async function executeInTerminal(
                     exitCode = code;
                     
                     if (code === 0) {
-                        terminal.sendText(`${ANSI.green}└─ 完成 (退出码: ${code}) ${'─'.repeat(42)}${ANSI.reset}`);
+                        printToTerminal(`${ANSI.green}└─ 完成 (退出码: ${code}) ${'─'.repeat(42)}${ANSI.reset}`);
                     } else {
-                        terminal.sendText(`${ANSI.red}└─ 完成 (退出码: ${code}) ${'─'.repeat(42)}${ANSI.reset}`);
+                        printToTerminal(`${ANSI.red}└─ 完成 (退出码: ${code}) ${'─'.repeat(42)}${ANSI.reset}`);
                     }
                     
                     const combinedOutput = stdout + stderr;
@@ -215,13 +226,13 @@ async function executeInTerminal(
                             const level = getLogLevel(line);
                             switch (level) {
                                 case 'error':
-                                    terminal.sendText(`${ANSI.red}│ ${line}${ANSI.reset}`);
+                                    printToTerminal(`${ANSI.red}│ ${line}${ANSI.reset}`);
                                     break;
                                 case 'warn':
-                                    terminal.sendText(`${ANSI.yellow}│ ${line}${ANSI.reset}`);
+                                    printToTerminal(`${ANSI.yellow}│ ${line}${ANSI.reset}`);
                                     break;
                                 default:
-                                    terminal.sendText(`${ANSI.white}│ ${line}${ANSI.reset}`);
+                                    printToTerminal(`${ANSI.white}│ ${line}${ANSI.reset}`);
                             }
                         }
                     }
@@ -235,7 +246,7 @@ async function executeInTerminal(
                     const lines = cleanText.split('\n');
                     for (const line of lines) {
                         if (line.trim()) {
-                            terminal.sendText(`${ANSI.red}│ ${line}${ANSI.reset}`);
+                            printToTerminal(`${ANSI.red}│ ${line}${ANSI.reset}`);
                         }
                     }
                 });
