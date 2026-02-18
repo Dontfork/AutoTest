@@ -37,7 +37,8 @@ export class QuickCommandDetector {
                         name: cmd.name,
                         executeCommand: cmd.executeCommand,
                         projectName: project.name,
-                        project: project
+                        project: project,
+                        clearOutputBeforeRun: cmd.clearOutputBeforeRun
                     }))
                 });
             }

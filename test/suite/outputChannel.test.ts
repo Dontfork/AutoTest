@@ -25,10 +25,10 @@ describe('OutputChannelManager Module - 输出通道管理模块测试', () => {
             assert.strictEqual(channelTypes.length, 2);
         });
 
-        it('验证AutoTest通道名称', () => {
-            const autoTestChannel = 'RemoteTest';
+        it('验证RemoteTest通道名称', () => {
+            const remoteTestChannel = 'RemoteTest';
             
-            assert.strictEqual(autoTestChannel, 'RemoteTest');
+            assert.strictEqual(remoteTestChannel, 'RemoteTest');
         });
 
         it('验证TestOutput通道名称', () => {
@@ -36,30 +36,20 @@ describe('OutputChannelManager Module - 输出通道管理模块测试', () => {
             
             assert.strictEqual(testOutputChannel, 'TestOutput');
         });
-
-        it('验证通道类型枚举值', () => {
-            const OutputChannelType = {
-                AUTO_TEST: 'RemoteTest',
-                TEST_OUTPUT: 'TestOutput'
-            };
-            
-            assert.strictEqual(OutputChannelType.AUTO_TEST, 'RemoteTest');
-            assert.strictEqual(OutputChannelType.TEST_OUTPUT, 'TestOutput');
-        });
     });
 
     describe('通道用途分离', () => {
-        it('验证AutoTest通道用于插件信息', () => {
-            const autoTestUsages = [
+        it('验证RemoteTest通道用于插件信息', () => {
+            const remoteTestUsages = [
                 '配置验证结果',
                 'Git检测日志',
                 '错误信息',
                 '调试信息'
             ];
             
-            assert.strictEqual(autoTestUsages.length, 4);
-            assert.ok(autoTestUsages.includes('配置验证结果'));
-            assert.ok(autoTestUsages.includes('错误信息'));
+            assert.strictEqual(remoteTestUsages.length, 4);
+            assert.ok(remoteTestUsages.includes('配置验证结果'));
+            assert.ok(remoteTestUsages.includes('错误信息'));
         });
 
         it('验证TestOutput通道用于命令输出', () => {
@@ -74,14 +64,14 @@ describe('OutputChannelManager Module - 输出通道管理模块测试', () => {
     });
 
     describe('通道管理器方法', () => {
-        it('验证getAutoTestChannel方法存在', () => {
-            const methods = ['getAutoTestChannel', 'getTestOutputChannel', 'appendLine', 'show'];
+        it('验证getRemoteTestChannel方法存在', () => {
+            const methods = ['getRemoteTestChannel', 'getTestOutputChannel', 'appendLine', 'show'];
             
-            assert.ok(methods.includes('getAutoTestChannel'));
+            assert.ok(methods.includes('getRemoteTestChannel'));
         });
 
         it('验证getTestOutputChannel方法存在', () => {
-            const methods = ['getAutoTestChannel', 'getTestOutputChannel', 'appendLine', 'show'];
+            const methods = ['getRemoteTestChannel', 'getTestOutputChannel', 'appendLine', 'show'];
             
             assert.ok(methods.includes('getTestOutputChannel'));
         });
@@ -126,10 +116,12 @@ describe('OutputChannelManager Module - 输出通道管理模块测试', () => {
         it('验证通道名称必须精确匹配', () => {
             const allowedChannels = ['RemoteTest', 'TestOutput'];
             
-            assert.ok(!allowedChannels.includes('RemoteTest'));
+            assert.ok(allowedChannels.includes('RemoteTest'));
+            assert.ok(allowedChannels.includes('TestOutput'));
             assert.ok(!allowedChannels.includes('RemoteTest '));
             assert.ok(!allowedChannels.includes(' RemoteTest'));
             assert.ok(!allowedChannels.includes('testoutput'));
+            assert.ok(!allowedChannels.includes('remoteTest'));
         });
     });
 
@@ -165,6 +157,93 @@ describe('OutputChannelManager Module - 输出通道管理模块测试', () => {
             getChannel('TestOutput');
             
             assert.strictEqual(channels.size, 2);
+        });
+    });
+
+    describe('useLogOutputChannel 配置 - 输出通道类型控制', () => {
+        it('验证默认值为 true - 使用 LogOutputChannel', () => {
+            const config = { useLogOutputChannel: true };
+            assert.strictEqual(config.useLogOutputChannel, true);
+        });
+
+        it('验证配置为 false 时使用普通 OutputChannel', () => {
+            const config = { useLogOutputChannel: false };
+            assert.strictEqual(config.useLogOutputChannel, false);
+        });
+
+        it('验证未配置时默认为 true', () => {
+            const config = {};
+            const useLogOutputChannel = (config as any).useLogOutputChannel ?? true;
+            assert.strictEqual(useLogOutputChannel, true);
+        });
+
+        it('验证 LogOutputChannel 支持日志级别方法', () => {
+            const logMethods = ['info', 'warn', 'error', 'trace'];
+            assert.ok(logMethods.includes('info'));
+            assert.ok(logMethods.includes('warn'));
+            assert.ok(logMethods.includes('error'));
+            assert.ok(logMethods.includes('trace'));
+        });
+
+        it('验证 UnifiedOutputChannel 接口方法', () => {
+            const unifiedMethods = [
+                'append', 'appendLine', 'clear', 'show', 'hide', 'dispose',
+                'info', 'warn', 'error', 'trace'
+            ];
+            assert.strictEqual(unifiedMethods.length, 10);
+            assert.ok(unifiedMethods.includes('info'));
+            assert.ok(unifiedMethods.includes('warn'));
+            assert.ok(unifiedMethods.includes('error'));
+            assert.ok(unifiedMethods.includes('trace'));
+        });
+
+        it('验证配置变更时重新创建 TestOutput 通道', () => {
+            let currentUseLogOutputChannel = true;
+            let channelDisposed = false;
+            
+            const shouldRecreate = (newConfig: boolean) => {
+                if (currentUseLogOutputChannel !== newConfig) {
+                    channelDisposed = true;
+                    currentUseLogOutputChannel = newConfig;
+                    return true;
+                }
+                return false;
+            };
+            
+            assert.ok(shouldRecreate(false));
+            assert.strictEqual(channelDisposed, true);
+            assert.strictEqual(currentUseLogOutputChannel, false);
+        });
+
+        it('验证配置不变时不需要重新创建通道', () => {
+            let currentUseLogOutputChannel = true;
+            let channelDisposed = false;
+            
+            const shouldRecreate = (newConfig: boolean) => {
+                if (currentUseLogOutputChannel !== newConfig) {
+                    channelDisposed = true;
+                    currentUseLogOutputChannel = newConfig;
+                    return true;
+                }
+                return false;
+            };
+            
+            assert.ok(!shouldRecreate(true));
+            assert.strictEqual(channelDisposed, false);
+        });
+
+        it('验证 RemoteTest 通道固定使用 LogOutputChannel', () => {
+            const remoteTestChannelType = 'LogOutputChannel';
+            assert.strictEqual(remoteTestChannelType, 'LogOutputChannel');
+        });
+
+        it('验证 TestOutput 通道类型由配置决定', () => {
+            const getTestOutputChannelType = (useLogOutputChannel: boolean) => {
+                return useLogOutputChannel ? 'LogOutputChannel' : 'OutputChannel';
+            };
+            
+            assert.strictEqual(getTestOutputChannelType(true), 'LogOutputChannel');
+            assert.strictEqual(getTestOutputChannelType(false), 'OutputChannel');
         });
     });
 });

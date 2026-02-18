@@ -8,8 +8,7 @@ import {
     stripAnsiEscapeCodes,
     matchPattern
 } from '../utils/outputFilter';
-
-type LogOutputChannel = vscode.LogOutputChannel;
+import { UnifiedOutputChannel } from '../utils/outputChannel';
 
 let isCommandExecuting = false;
 
@@ -136,7 +135,7 @@ export interface ExecuteResult {
 
 export async function executeRemoteCommand(
     command: string,
-    outputChannel?: LogOutputChannel,
+    outputChannel?: UnifiedOutputChannel,
     serverConfig?: ServerConfig,
     commandConfig?: Partial<CommandConfig>,
     clearOutput?: boolean
@@ -275,4 +274,4 @@ export async function executeRemoteCommand(
     }
 }
 
-export { filterCommandOutput, applyColorRules, getColorRules, stripAnsiEscapeCodes } from '../utils/outputFilter';
+export { filterCommandOutput, stripAnsiEscapeCodes } from '../utils/outputFilter';

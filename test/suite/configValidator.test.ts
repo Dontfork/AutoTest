@@ -237,7 +237,7 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             assert.ok(result.warnings.some((w: string) => w.includes('models') && w.includes('空')));
         });
 
-        it('验证旧AI配置格式 - 应给出迁移警告', () => {
+        it('验证旧AI配置格式 - 应给出警告', () => {
             const config: any = {
                 projects: [{
                     name: 'TestProject',
@@ -258,7 +258,7 @@ describe('Config Validator Module - 配置验证模块测试', () => {
             };
             const result = validateConfig(config);
             
-            assert.ok(result.warnings.some((w: string) => w.includes('provider/qwen/openai') && w.includes('迁移')));
+            assert.ok(result.warnings.some((w: string) => w.includes('models')));
         });
 
         it('验证自部署模型无apiKey - 应通过', () => {

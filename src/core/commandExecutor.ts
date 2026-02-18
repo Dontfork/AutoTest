@@ -3,30 +3,47 @@ import * as path from 'path';
 import { getConfig } from '../config';
 import { executeRemoteCommand, isExecuting } from './sshClient';
 import { CommandConfig, CommandVariables } from '../types';
-import { getOutputChannelManager } from '../utils/outputChannel';
+import { getOutputChannelManager, UnifiedOutputChannel } from '../utils/outputChannel';
+
+export function replaceCommandVariables(command: string, variables: CommandVariables): string {
+    return command
+        .replace(/{filePath}/g, variables.filePath)
+        .replace(/{fileName}/g, variables.fileName)
+        .replace(/{fileDir}/g, variables.fileDir)
+        .replace(/{localPath}/g, variables.localPath)
+        .replace(/{localDir}/g, variables.localDir)
+        .replace(/{localFileName}/g, variables.localFileName)
+        .replace(/{remoteDir}/g, variables.remoteDir);
+}
+
+export function buildCommandVariables(
+    localFilePath: string,
+    remoteFilePath: string,
+    remoteDir: string
+): CommandVariables {
+    return {
+        filePath: remoteFilePath,
+        fileName: path.posix.basename(remoteFilePath),
+        fileDir: path.posix.dirname(remoteFilePath),
+        localPath: localFilePath,
+        localDir: path.dirname(localFilePath),
+        localFileName: path.basename(localFilePath),
+        remoteDir: remoteDir
+    };
+}
 
 export class CommandExecutor {
-    private pluginChannel: vscode.LogOutputChannel;
-    private testOutputChannel: vscode.LogOutputChannel;
+    private pluginChannel: UnifiedOutputChannel;
+    private testOutputChannel: UnifiedOutputChannel;
 
     constructor() {
         const channelManager = getOutputChannelManager();
-        this.pluginChannel = channelManager.getAutoTestChannel();
+        this.pluginChannel = channelManager.getRemoteTestChannel();
         this.testOutputChannel = channelManager.getTestOutputChannel();
     }
 
     replaceVariables(command: string, variables: CommandVariables): string {
-        let result = command;
-        
-        result = result.replace(/{filePath}/g, variables.filePath);
-        result = result.replace(/{fileName}/g, variables.fileName);
-        result = result.replace(/{fileDir}/g, variables.fileDir);
-        result = result.replace(/{localPath}/g, variables.localPath);
-        result = result.replace(/{localDir}/g, variables.localDir);
-        result = result.replace(/{localFileName}/g, variables.localFileName);
-        result = result.replace(/{remoteDir}/g, variables.remoteDir);
-        
-        return result;
+        return replaceCommandVariables(command, variables);
     }
 
     async execute(command: string, commandConfig?: Partial<CommandConfig>): Promise<string> {
@@ -54,11 +71,11 @@ export class CommandExecutor {
         }
     }
 
-    getPluginChannel(): vscode.LogOutputChannel {
+    getPluginChannel(): UnifiedOutputChannel {
         return this.pluginChannel;
     }
 
-    getTestOutputChannel(): vscode.LogOutputChannel {
+    getTestOutputChannel(): UnifiedOutputChannel {
         return this.testOutputChannel;
     }
 
@@ -72,41 +89,6 @@ export class CommandExecutor {
     }
 
     dispose(): void {
-        const channelManager = getOutputChannelManager();
-        channelManager.dispose();
+        getOutputChannelManager().dispose();
     }
-}
-
-export function replaceCommandVariables(command: string, variables: CommandVariables): string {
-    let result = command;
-    
-    result = result.replace(/{filePath}/g, variables.filePath);
-    result = result.replace(/{fileName}/g, variables.fileName);
-    result = result.replace(/{fileDir}/g, variables.fileDir);
-    result = result.replace(/{localPath}/g, variables.localPath);
-    result = result.replace(/{localDir}/g, variables.localDir);
-    result = result.replace(/{localFileName}/g, variables.localFileName);
-    result = result.replace(/{remoteDir}/g, variables.remoteDir);
-    
-    return result;
-}
-
-export function buildCommandVariables(
-    localFilePath: string,
-    remoteFilePath: string,
-    remoteDir: string
-): CommandVariables {
-    const localDir = path.dirname(localFilePath);
-    const localFileName = path.basename(localFilePath);
-    const remoteFileDir = path.posix.dirname(remoteFilePath);
-    
-    return {
-        filePath: remoteFilePath,
-        fileName: path.posix.basename(remoteFilePath),
-        fileDir: remoteFileDir,
-        localPath: localFilePath,
-        localDir: localDir,
-        localFileName: localFileName,
-        remoteDir: remoteDir
-    };
 }

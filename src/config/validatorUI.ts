@@ -8,7 +8,7 @@ export function showValidationMessages(result: ConfigValidationResult): void {
         const errorMessage = `RemoteTest 配置验证失败：\n${result.errors.join('\n')}`;
         vscode.window.showErrorMessage(errorMessage, '查看详情').then(selection => {
             if (selection === '查看详情') {
-                const outputChannel = getOutputChannelManager().getAutoTestChannel();
+                const outputChannel = getOutputChannelManager().getRemoteTestChannel();
                 outputChannel.info('');
                 outputChannel.info('配置验证结果');
                 outputChannel.info('─'.repeat(50));

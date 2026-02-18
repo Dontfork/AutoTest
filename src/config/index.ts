@@ -270,7 +270,8 @@ export function loadConfig(workspacePath: string): AutoTestConfig {
                 ai: deepMerge(defaultAIConfig, finalConfig.ai || {}),
                 refreshInterval: finalConfig.refreshInterval ?? 0,
                 textFileExtensions: finalConfig.textFileExtensions,
-                clearOutputBeforeRun: finalConfig.clearOutputBeforeRun ?? true
+                clearOutputBeforeRun: finalConfig.clearOutputBeforeRun ?? true,
+                useLogOutputChannel: finalConfig.useLogOutputChannel ?? true
             };
         } else {
             config = convertLegacyConfig(loadedConfig, workspacePath);
@@ -291,6 +292,11 @@ export function getConfig(): AutoTestConfig {
 export function getRefreshInterval(): number {
     const currentConfig = getConfig();
     return currentConfig.refreshInterval ?? 5000;
+}
+
+export function getUseLogOutputChannel(): boolean {
+    const currentConfig = getConfig();
+    return currentConfig.useLogOutputChannel ?? true;
 }
 
 export function getEnabledProjects(): ProjectConfig[] {

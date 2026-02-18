@@ -8,7 +8,7 @@ import { LogFile, LogDirectoryConfig, ProjectConfig, ServerConfig } from '../typ
 import { getOutputChannelManager } from '../utils/outputChannel';
 
 function log(message: string): void {
-    const channel = getOutputChannelManager().getAutoTestChannel();
+    const channel = getOutputChannelManager().getRemoteTestChannel();
     channel.info(`[LogMonitor] ${message}`);
 }
 

@@ -17,12 +17,8 @@ interface CommandConfig {
     executeCommand: string;
     includePatterns?: string[];
     excludePatterns?: string[];
-    colorRules?: OutputColorRule[];
-}
-
-interface OutputColorRule {
-    pattern: string;
-    color: 'red' | 'green' | 'yellow' | 'blue' | 'cyan' | 'magenta' | 'white' | 'gray';
+    runnable?: boolean;
+    clearOutputBeforeRun?: boolean;
 }
 
 interface CommandVariables {
@@ -285,25 +281,6 @@ describe('Types Module - 类型定义模块测试', () => {
             assert.ok(config.includePatterns?.includes('PASSED'));
         });
 
-        it('验证颜色规则配置 - 支持输出颜色渲染', () => {
-            const config: CommandConfig = {
-                name: '测试命令',
-                executeCommand: 'pytest {filePath} -v',
-                includePatterns: [],
-                excludePatterns: [],
-                colorRules: [
-                    { pattern: 'error|ERROR', color: 'red' },
-                    { pattern: 'success|SUCCESS', color: 'green' },
-                    { pattern: 'warn|WARN', color: 'yellow' }
-                ]
-            };
-            
-            assert.strictEqual(config.colorRules?.length, 3);
-            assert.strictEqual(config.colorRules?.[0].color, 'red');
-            assert.strictEqual(config.colorRules?.[1].color, 'green');
-            assert.strictEqual(config.colorRules?.[2].color, 'yellow');
-        });
-
         it('验证同时使用include和exclude过滤', () => {
             const config: CommandConfig = {
                 name: '测试命令',
@@ -314,6 +291,52 @@ describe('Types Module - 类型定义模块测试', () => {
             
             assert.strictEqual(config.includePatterns?.length, 2);
             assert.strictEqual(config.excludePatterns?.length, 2);
+        });
+
+        it('验证clearOutputBeforeRun配置 - 执行前清空输出', () => {
+            const config: CommandConfig = {
+                name: '测试命令',
+                executeCommand: 'npm test',
+                clearOutputBeforeRun: true
+            };
+            
+            assert.strictEqual(config.clearOutputBeforeRun, true);
+        });
+
+        it('验证clearOutputBeforeRun默认值 - 未配置时为undefined', () => {
+            const config: CommandConfig = {
+                name: '测试命令',
+                executeCommand: 'npm test'
+            };
+            
+            assert.strictEqual(config.clearOutputBeforeRun, undefined);
+        });
+
+        it('验证clearOutputBeforeRun为false - 保留历史输出', () => {
+            const config: CommandConfig = {
+                name: '测试命令',
+                executeCommand: 'npm test',
+                clearOutputBeforeRun: false
+            };
+            
+            assert.strictEqual(config.clearOutputBeforeRun, false);
+        });
+
+        it('验证完整命令配置 - 包含所有可选字段', () => {
+            const config: CommandConfig = {
+                name: '运行测试',
+                executeCommand: 'pytest {filePath} -v',
+                includePatterns: ['ERROR', 'FAILED', 'PASSED'],
+                excludePatterns: ['traceback'],
+                runnable: true,
+                clearOutputBeforeRun: true
+            };
+            
+            assert.strictEqual(config.name, '运行测试');
+            assert.strictEqual(config.runnable, true);
+            assert.strictEqual(config.clearOutputBeforeRun, true);
+            assert.strictEqual(config.includePatterns?.length, 3);
+            assert.strictEqual(config.excludePatterns?.length, 1);
         });
     });
 

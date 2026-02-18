@@ -247,36 +247,22 @@ Java Maven:
 - 两者可以同时使用，先应用 includePatterns，再应用 excludePatterns
 - 模式使用正则表达式匹配
 
-**内置颜色规则**：
-
-插件内置了常用颜色规则，无需手动配置：
-
-| 模式 | 颜色 | 说明 |
-|------|------|------|
-| `ERROR|FAILED|FAIL|Exception|Traceback` | 红色 | 错误信息 |
-| `PASSED|SUCCESS|OK|✓|✔` | 绿色 | 成功信息 |
-| `WARNING|WARN|⚠` | 黄色 | 警告信息 |
-| `INFO|info|ℹ` | 蓝色 | 信息提示 |
-
 ### 3.4 AI 配置
 
 ```typescript
+type AIProviderType = 'qwen' | 'openai';
+
 interface AIConfig {
-    provider: 'qwen' | 'openai';  // AI 提供商
-    qwen: QWenConfig;             // 通义千问配置
-    openai: OpenAIConfig;         // OpenAI 配置
+    models: AIModelConfig[];    // 模型列表
+    defaultModel?: string;      // 默认模型名称
+    proxy?: string;             // 全局代理（host:port）
 }
 
-interface QWenConfig {
-    apiKey: string;               // API 密钥
-    apiUrl: string;               // API 地址
-    model: string;                // 模型名称
-}
-
-interface OpenAIConfig {
-    apiKey: string;               // API 密钥
-    apiUrl: string;               // API 地址
-    model: string;                // 模型名称
+interface AIModelConfig {
+    name: string;               // 模型名称
+    provider?: AIProviderType;  // 提供商类型（可选）
+    apiKey?: string;            // API 密钥（可选）
+    apiUrl?: string;            // 自定义 API 地址（可选）
 }
 ```
 
@@ -284,22 +270,55 @@ interface OpenAIConfig {
 
 | 字段 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| provider | enum | 是 | "qwen" | 当前使用的 AI 提供商 |
-| qwen.apiKey | string | 是* | "" | 通义千问 API 密钥 |
-| qwen.apiUrl | string | 否 | 阿里云默认地址 | API 接口地址 |
-| qwen.model | string | 否 | "qwen-turbo" | 模型名称 |
-| openai.apiKey | string | 是* | "" | OpenAI API 密钥 |
-| openai.apiUrl | string | 否 | OpenAI 默认地址 | API 接口地址 |
-| openai.model | string | 否 | "gpt-3.5-turbo" | 模型名称 |
+| models | AIModelConfig[] | 是 | [] | 模型配置列表 |
+| models[].name | string | 是 | - | 模型名称 |
+| models[].provider | 'qwen' \| 'openai' | 否 | 自动识别 | 提供商类型 |
+| models[].apiKey | string | 否 | "" | API 密钥 |
+| models[].apiUrl | string | 否 | 默认地址 | 自定义 API 地址 |
+| defaultModel | string | 否 | 第一个模型 | 默认使用的模型 |
+| proxy | string | 否 | - | 全局代理，格式 `host:port` |
 
-*根据 provider 选择对应的 apiKey
+**provider 说明**：
+- `qwen`：通义千问 API 格式
+- `openai`：OpenAI API 格式（兼容大多数本地模型如 Ollama、vLLM）
 
-**支持的模型**：
+**模型自动识别**（未配置 provider 时）：
+- QWen 模型：名称包含 `qwen`
+- 其他模型：默认使用 `openai` 格式
 
-| 提供商 | 模型列表 |
-|--------|----------|
-| QWen | qwen-turbo, qwen-plus, qwen-max, qwen-max-longcontext |
-| OpenAI | gpt-3.5-turbo, gpt-3.5-turbo-16k, gpt-4, gpt-4-32k, gpt-4-turbo |
+**配置示例**：
+
+```json
+{
+  "ai": {
+    "models": [
+      {
+        "name": "qwen-turbo",
+        "provider": "qwen",
+        "apiKey": "your-qwen-api-key"
+      },
+      {
+        "name": "gpt-4",
+        "provider": "openai",
+        "apiKey": "your-openai-api-key",
+        "apiUrl": "https://api.openai.com/v1/chat/completions"
+      },
+      {
+        "name": "local-llm",
+        "provider": "openai",
+        "apiUrl": "http://localhost:8000/v1/chat/completions"
+      }
+    ],
+    "defaultModel": "qwen-turbo",
+    "proxy": "proxy.company.com:8080"
+  }
+}
+```
+
+**自部署模型**：
+- 对于自部署的模型（如 Ollama、LocalAI），可以不配置 `apiKey`
+- 只需配置 `apiUrl` 指向本地服务地址
+- 设置 `provider: "openai"` 使用 OpenAI 兼容格式
 
 ### 3.5 日志配置
 

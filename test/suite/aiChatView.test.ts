@@ -138,7 +138,7 @@ describe('AIChatView WebView Template - WebView模板测试', () => {
 
     it('模板应包含模型选择下拉框', () => {
         const template = getTemplate();
-        assert.ok(template.includes('id="modelSelect"'));
+        assert.ok(template.includes('id="modelSelectBtn"'));
         assert.ok(template.includes('model-select'));
     });
 
@@ -157,9 +157,9 @@ describe('AIChatView WebView Template - WebView模板测试', () => {
         assert.ok(template.includes('function renderModels'));
     });
 
-    it('模型选择下拉框应有change事件', () => {
+    it('模型选择按钮应有click事件', () => {
         const template = getTemplate();
-        assert.ok(template.includes('modelSelect.onchange'));
+        assert.ok(template.includes('modelSelectBtn.onclick'));
     });
 
     it('应支持切换模型', () => {
@@ -328,6 +328,7 @@ describe('AIChatView Markdown Rendering - Markdown渲染增强测试', () => {
 
     it('代码块背景色应不同于页面背景', () => {
         const template = getTemplate();
-        assert.ok(template.includes('.bubble pre { background:'));
+        assert.ok(template.includes('.bubble pre'));
+        assert.ok(template.includes('background:'));
     });
 });

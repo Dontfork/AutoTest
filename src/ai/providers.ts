@@ -1,94 +1,104 @@
 import axios from 'axios';
-import { AIMessage, AIResponse, AIModelConfig, AIConfig } from '../types';
+import { AIMessage, AIResponse, AIModelConfig, AIProviderType } from '../types';
 
 export interface AIProvider {
     send(messages: AIMessage[]): Promise<AIResponse>;
     sendStream(messages: AIMessage[], onChunk: (chunk: string) => void): Promise<AIResponse>;
 }
 
-const QWEN_MODELS = ['qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-max-longcontext', 'qwen-long'];
-const OPENAI_MODELS = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini'];
-
-function isQwenModel(modelName: string): boolean {
-    const lowerName = modelName.toLowerCase();
-    return QWEN_MODELS.some(m => lowerName.includes(m)) || 
-           lowerName.includes('qwen');
+interface ProviderConfig {
+    defaultApiUrl: string;
+    buildRequestBody: (model: string, messages: AIMessage[], stream?: boolean) => any;
+    parseContent: (data: any) => string;
+    parseStreamContent: (data: any) => string;
+    extraHeaders?: Record<string, string>;
+    streamExtraHeaders?: Record<string, string>;
 }
 
-function isOpenAIModel(modelName: string): boolean {
-    const lowerName = modelName.toLowerCase();
-    return OPENAI_MODELS.some(m => lowerName.includes(m)) || 
-           lowerName.includes('gpt');
+const QWEN_CONFIG: ProviderConfig = {
+    defaultApiUrl: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+    extraHeaders: { 'Accept': 'application/json' },
+    streamExtraHeaders: { 'X-DashScope-SSE': 'enable' },
+    buildRequestBody: (model, messages, stream) => ({
+        model,
+        input: { messages: messages.map(m => ({ role: m.role, content: m.content })) },
+        parameters: { 
+            result_format: 'message',
+            ...(stream && { incremental_output: true })
+        }
+    }),
+    parseContent: (data) => String(data?.output?.choices?.[0]?.message?.content ?? ''),
+    parseStreamContent: (data) => data?.output?.choices?.[0]?.message?.content || ''
+};
+
+const OPENAI_CONFIG: ProviderConfig = {
+    defaultApiUrl: 'https://api.openai.com/v1/chat/completions',
+    buildRequestBody: (model, messages, stream) => ({
+        model,
+        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        ...(stream && { stream: true })
+    }),
+    parseContent: (data) => data?.choices?.[0]?.message?.content || '',
+    parseStreamContent: (data) => data?.choices?.[0]?.delta?.content || ''
+};
+
+const PROVIDER_CONFIGS: Record<AIProviderType, ProviderConfig> = {
+    qwen: QWEN_CONFIG,
+    openai: OPENAI_CONFIG
+};
+
+function detectProvider(modelName: string): AIProviderType {
+    const name = modelName.toLowerCase();
+    if (name.includes('qwen')) return 'qwen';
+    return 'openai';
 }
 
-function getDefaultApiUrl(modelName: string): string {
-    if (isQwenModel(modelName)) {
-        return 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
-    }
-    return 'https://api.openai.com/v1/chat/completions';
+export function isQwenModel(modelName: string): boolean {
+    return modelName.toLowerCase().includes('qwen');
+}
+
+export function isOpenAIModel(modelName: string): boolean {
+    return modelName.toLowerCase().includes('gpt');
 }
 
 export class AIProviderImpl implements AIProvider {
     private config: AIModelConfig;
     private globalProxy?: string;
+    private providerConfig: ProviderConfig;
 
     constructor(config: AIModelConfig, globalProxy?: string) {
         this.config = config;
         this.globalProxy = globalProxy;
+        const providerType = config.provider || detectProvider(config.name);
+        this.providerConfig = PROVIDER_CONFIGS[providerType];
+    }
+
+    private getAxiosConfig(stream?: boolean): any {
+        const axiosConfig: any = {
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.config.apiKey && { 'Authorization': `Bearer ${this.config.apiKey}` }),
+                ...this.providerConfig.extraHeaders,
+                ...(stream && { 'Accept': 'text/event-stream', ...this.providerConfig.streamExtraHeaders })
+            },
+            timeout: stream ? 120000 : 60000
+        };
+
+        if (this.globalProxy) {
+            const [host, port] = this.globalProxy.split(':');
+            axiosConfig.proxy = { host, port: parseInt(port || '8080', 10) };
+        }
+
+        return axiosConfig;
     }
 
     async send(messages: AIMessage[]): Promise<AIResponse> {
-        const apiUrl = this.config.apiUrl || getDefaultApiUrl(this.config.name);
-        const isQwen = isQwenModel(this.config.name);
-        const proxy = this.globalProxy;
+        const apiUrl = this.config.apiUrl || this.providerConfig.defaultApiUrl;
+        const requestBody = this.providerConfig.buildRequestBody(this.config.name, messages);
 
         try {
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json'
-            };
-
-            if (this.config.apiKey) {
-                headers['Authorization'] = `Bearer ${this.config.apiKey}`;
-            }
-
-            let requestBody: any;
-            
-            if (isQwen) {
-                headers['Accept'] = 'application/json';
-                requestBody = {
-                    model: this.config.name,
-                    input: { messages: messages.map(m => ({ role: m.role, content: m.content })) },
-                    parameters: { result_format: 'message' }
-                };
-            } else {
-                requestBody = {
-                    model: this.config.name,
-                    messages: messages.map(m => ({ role: m.role, content: m.content }))
-                };
-            }
-
-            const axiosConfig: any = {
-                headers,
-                timeout: 60000
-            };
-
-            if (proxy) {
-                axiosConfig.proxy = {
-                    host: proxy.split(':')[0],
-                    port: parseInt(proxy.split(':')[1] || '8080', 10)
-                };
-            }
-
-            const response = await axios.post(apiUrl, requestBody, axiosConfig);
-
-            let content: string;
-            if (isQwen) {
-                const rawContent = response.data?.output?.choices?.[0]?.message?.content;
-                content = rawContent !== undefined && rawContent !== null ? String(rawContent) : '';
-            } else {
-                content = response.data?.choices?.[0]?.message?.content || '';
-            }
-            
+            const response = await axios.post(apiUrl, requestBody, this.getAxiosConfig());
+            const content = this.providerConfig.parseContent(response.data);
             return { content: content || 'AI 未返回有效响应' };
         } catch (error: any) {
             const errorMsg = error.response?.data?.message || 
@@ -100,9 +110,8 @@ export class AIProviderImpl implements AIProvider {
 
     async sendStream(messages: AIMessage[], onChunk: (chunk: string) => void): Promise<AIResponse> {
         try {
-            const streamResponse = await this.tryStream(messages, onChunk);
-            return streamResponse;
-        } catch (streamError: any) {
+            return await this.doStream(messages, onChunk);
+        } catch {
             const response = await this.send(messages);
             if (response.content && !response.error) {
                 onChunk(response.content);
@@ -111,55 +120,16 @@ export class AIProviderImpl implements AIProvider {
         }
     }
 
-    private async tryStream(messages: AIMessage[], onChunk: (chunk: string) => void): Promise<AIResponse> {
-        const apiUrl = this.config.apiUrl || getDefaultApiUrl(this.config.name);
-        const isQwen = isQwenModel(this.config.name);
-        const proxy = this.globalProxy;
-
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-            'Accept': 'text/event-stream'
-        };
-
-        if (this.config.apiKey) {
-            headers['Authorization'] = `Bearer ${this.config.apiKey}`;
-        }
-
-        let requestBody: any;
-        
-        if (isQwen) {
-            headers['X-DashScope-SSE'] = 'enable';
-            requestBody = {
-                model: this.config.name,
-                input: { messages: messages.map(m => ({ role: m.role, content: m.content })) },
-                parameters: { 
-                    result_format: 'message',
-                    incremental_output: true
-                }
-            };
-        } else {
-            requestBody = {
-                model: this.config.name,
-                messages: messages.map(m => ({ role: m.role, content: m.content })),
-                stream: true
-            };
-        }
-
-        const axiosConfig: any = {
+    private async doStream(messages: AIMessage[], onChunk: (chunk: string) => void): Promise<AIResponse> {
+        const apiUrl = this.config.apiUrl || this.providerConfig.defaultApiUrl;
+        const requestBody = this.providerConfig.buildRequestBody(this.config.name, messages, true);
+        const axiosConfig = {
+            ...this.getAxiosConfig(true),
             method: 'POST',
             url: apiUrl,
-            headers,
             data: requestBody,
-            responseType: 'stream',
-            timeout: 120000
+            responseType: 'stream'
         };
-
-        if (proxy) {
-            axiosConfig.proxy = {
-                host: proxy.split(':')[0],
-                port: parseInt(proxy.split(':')[1] || '8080', 10)
-            };
-        }
 
         const response = await axios(axiosConfig);
 
@@ -170,50 +140,35 @@ export class AIProviderImpl implements AIProvider {
 
             response.data.on('data', (chunk: Buffer) => {
                 hasData = true;
-                const chunkStr = chunk.toString('utf-8');
-                buffer += chunkStr;
+                buffer += chunk.toString('utf-8');
                 const lines = buffer.split('\n');
                 buffer = lines.pop() || '';
 
                 for (const line of lines) {
-                    if (line.startsWith('data:')) {
-                        const data = line.slice(5).trim();
-                        if (data === '[DONE]') continue;
-                        
-                        try {
-                            const json = JSON.parse(data);
-                            let content: string;
-                            
-                            if (isQwen) {
-                                content = json?.output?.choices?.[0]?.message?.content || '';
-                            } else {
-                                content = json?.choices?.[0]?.delta?.content || '';
-                            }
-                            
-                            if (content) {
-                                fullContent += content;
-                                onChunk(content);
-                            }
-                        } catch {
-                            // 忽略解析错误
+                    if (!line.startsWith('data:')) continue;
+                    const data = line.slice(5).trim();
+                    if (data === '[DONE]') continue;
+                    
+                    try {
+                        const json = JSON.parse(data);
+                        const content = this.providerConfig.parseStreamContent(json);
+                        if (content) {
+                            fullContent += content;
+                            onChunk(content);
                         }
-                    }
+                    } catch {}
                 }
             });
 
             response.data.on('end', () => {
-                if (fullContent) {
-                    resolve({ content: fullContent });
-                } else if (!hasData) {
-                    reject(new Error('流式响应无数据'));
-                } else {
+                if (fullContent || hasData) {
                     resolve({ content: fullContent || 'AI 未返回有效响应' });
+                } else {
+                    reject(new Error('流式响应无数据'));
                 }
             });
 
-            response.data.on('error', (err: Error) => {
-                reject(err);
-            });
+            response.data.on('error', reject);
         });
     }
 }
@@ -221,5 +176,3 @@ export class AIProviderImpl implements AIProvider {
 export function createProvider(config: AIModelConfig, globalProxy?: string): AIProvider {
     return new AIProviderImpl(config, globalProxy);
 }
-
-export { isQwenModel, isOpenAIModel };

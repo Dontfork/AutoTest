@@ -7,18 +7,13 @@ export interface ServerConfig {
     remoteDirectory?: string;
 }
 
-export interface OutputColorRule {
-    pattern: string;
-    color: 'red' | 'green' | 'yellow' | 'blue' | 'cyan' | 'magenta' | 'white' | 'gray';
-}
-
 export interface CommandConfig {
     name: string;
     executeCommand: string;
     includePatterns?: string[];
     excludePatterns?: string[];
-    colorRules?: OutputColorRule[];
     runnable?: boolean;
+    clearOutputBeforeRun?: boolean;
 }
 
 export interface CommandVariables {
@@ -31,8 +26,11 @@ export interface CommandVariables {
     remoteDir: string;
 }
 
+export type AIProviderType = 'qwen' | 'openai';
+
 export interface AIModelConfig {
     name: string;
+    provider?: AIProviderType;
     apiKey?: string;
     apiUrl?: string;
 }
@@ -68,6 +66,7 @@ export interface AutoTestConfig {
     refreshInterval?: number;
     textFileExtensions?: string[];
     clearOutputBeforeRun?: boolean;
+    useLogOutputChannel?: boolean;
 }
 
 export interface LegacyServerConfig {
@@ -156,6 +155,7 @@ export interface QuickCommand {
     executeCommand: string;
     projectName: string;
     project: ProjectConfig;
+    clearOutputBeforeRun?: boolean;
 }
 
 export interface QuickCommandGroup {

@@ -5,7 +5,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { GitChange, GitChangeGroup, GitChangeType, ProjectConfig } from '../types';
 import { getProjectsWithLocalPath } from '../config';
-import { getOutputChannelManager, OutputChannelType } from '../utils/outputChannel';
+import { getOutputChannelManager, UnifiedOutputChannel } from '../utils/outputChannel';
 
 const execAsync = promisify(exec);
 
@@ -16,10 +16,10 @@ interface RawGitChange {
 }
 
 export class GitChangeDetector {
-    private outputChannel: vscode.LogOutputChannel;
+    private outputChannel: UnifiedOutputChannel;
 
     constructor() {
-        this.outputChannel = getOutputChannelManager().getAutoTestChannel();
+        this.outputChannel = getOutputChannelManager().getRemoteTestChannel();
     }
 
     async getGitChanges(): Promise<GitChangeGroup[]> {

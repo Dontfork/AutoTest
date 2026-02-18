@@ -17,6 +17,7 @@
           "name": "运行测试",
           "executeCommand": "pytest {filePath} -v",
           "runnable": true,
+          "clearOutputBeforeRun": false,
           "includePatterns": ["error", "failed", "FAILED", "Error", "ERROR", "PASSED", "passed"]
         },
         {
@@ -82,20 +83,24 @@
     "models": [
       {
         "name": "qwen-turbo",
+        "provider": "qwen",
         "apiKey": "your-qwen-api-key"
       },
       {
         "name": "gpt-4",
+        "provider": "openai",
         "apiKey": "your-openai-api-key",
         "apiUrl": "https://api.openai.com/v1/chat/completions"
       },
       {
         "name": "local-llm",
+        "provider": "openai",
         "apiUrl": "http://localhost:8000/v1/chat/completions"
       }
     ],
     "defaultModel": "qwen-turbo",
     "proxy": "proxy.company.com:8080"
   },
-  "refreshInterval": 0
+  "refreshInterval": 0,
+  "useLogOutputChannel": true
 }

@@ -16,13 +16,13 @@ export interface MissingField {
     defaultValue: any;
 }
 
-const VALID_ROOT_KEYS = ['projects', 'ai', 'refreshInterval', 'textFileExtensions', 'clearOutputBeforeRun'];
+const VALID_ROOT_KEYS = ['projects', 'ai', 'refreshInterval', 'textFileExtensions', 'clearOutputBeforeRun', 'useLogOutputChannel'];
 
 const VALID_PROJECT_KEYS = ['name', 'localPath', 'enabled', 'server', 'commands', 'logs'];
 
 const VALID_SERVER_KEYS = ['host', 'port', 'username', 'password', 'privateKeyPath', 'remoteDirectory'];
 
-const VALID_COMMAND_KEYS = ['name', 'executeCommand', 'includePatterns', 'excludePatterns', 'colorRules', 'runnable'];
+const VALID_COMMAND_KEYS = ['name', 'executeCommand', 'includePatterns', 'excludePatterns', 'runnable', 'clearOutputBeforeRun'];
 
 const VALID_LOGS_KEYS = ['directories', 'downloadPath'];
 
@@ -30,7 +30,7 @@ const VALID_LOG_DIRECTORY_KEYS = ['name', 'path'];
 
 const VALID_AI_KEYS = ['models', 'defaultModel', 'proxy'];
 
-const VALID_MODEL_KEYS = ['name', 'apiKey', 'apiUrl'];
+const VALID_MODEL_KEYS = ['name', 'provider', 'apiKey', 'apiUrl'];
 
 const REQUIRED_PROJECT_FIELDS = [
     { path: 'name', field: 'name', defaultValue: '未命名工程' },
@@ -147,6 +147,10 @@ export function validateConfig(config: any): ConfigValidationResult {
         }
     }
 
+    if (config.useLogOutputChannel !== undefined && typeof config.useLogOutputChannel !== 'boolean') {
+        errors.push(`useLogOutputChannel 必须是布尔类型，当前类型为 "${typeof config.useLogOutputChannel}"`);
+    }
+
     if (config.textFileExtensions !== undefined) {
         if (!Array.isArray(config.textFileExtensions)) {
             errors.push(`textFileExtensions 必须是数组类型，当前类型为 "${typeof config.textFileExtensions}"`);
@@ -251,6 +255,10 @@ export function validateConfig(config: any): ConfigValidationResult {
                     errors.push(`工程 "${project.name || i + 1}" 的命令 "${cmd.name || j + 1}" 的 runnable 字段必须是布尔值，当前类型为 "${typeof cmd.runnable}"`);
                 }
 
+                if (cmd.clearOutputBeforeRun !== undefined && typeof cmd.clearOutputBeforeRun !== 'boolean') {
+                    errors.push(`工程 "${project.name || i + 1}" 的命令 "${cmd.name || j + 1}" 的 clearOutputBeforeRun 字段必须是布尔值，当前类型为 "${typeof cmd.clearOutputBeforeRun}"`);
+                }
+
                 if (cmd.includePatterns && !Array.isArray(cmd.includePatterns)) {
                     warnings.push(`工程 "${project.name || i + 1}" 的命令 "${cmd.name || j + 1}" 的 includePatterns 应为数组`);
                 }
@@ -316,6 +324,10 @@ export function validateConfig(config: any): ConfigValidationResult {
 
                 if (!model.name || typeof model.name !== 'string') {
                     warnings.push(`AI 模型 ${i + 1} 缺少 "name" 字段`);
+                }
+
+                if (model.provider && !['qwen', 'openai'].includes(model.provider)) {
+                    warnings.push(`AI 模型 "${model.name || i + 1}" 的 provider "${model.provider}" 无效，应为 qwen 或 openai`);
                 }
 
                 if (model.apiUrl && !isValidUrl(model.apiUrl)) {

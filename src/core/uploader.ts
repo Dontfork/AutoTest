@@ -6,11 +6,12 @@ import { SCPClient } from './scpClient';
 import { CommandExecutor, replaceCommandVariables, buildCommandVariables } from './commandExecutor';
 import { executeRemoteCommand, isExecuting } from './sshClient';
 import { ProjectConfig, CommandConfig } from '../types';
+import { UnifiedOutputChannel } from '../utils/outputChannel';
 
 export class FileUploader {
     private commandExecutor: CommandExecutor;
-    private pluginChannel: vscode.LogOutputChannel;
-    private testOutputChannel: vscode.LogOutputChannel;
+    private pluginChannel: UnifiedOutputChannel;
+    private testOutputChannel: UnifiedOutputChannel;
     private onTestCaseComplete: (() => void) | null = null;
 
     constructor(commandExecutor: CommandExecutor) {
@@ -238,7 +239,7 @@ export class FileUploader {
         this.testOutputChannel.info(`[${project.name}] ${finalCommand}`);
         
         const config = getConfig();
-        const clearOutput = config.clearOutputBeforeRun ?? true;
+        const clearOutput = command.clearOutputBeforeRun ?? config.clearOutputBeforeRun ?? true;
         
         const result = await executeRemoteCommand(
             finalCommand, 
@@ -246,8 +247,7 @@ export class FileUploader {
             project.server,
             {
                 includePatterns: command.includePatterns || [],
-                excludePatterns: command.excludePatterns || [],
-                colorRules: command.colorRules
+                excludePatterns: command.excludePatterns || []
             },
             clearOutput
         );

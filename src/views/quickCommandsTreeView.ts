@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { QuickCommandDetector } from '../core/quickCommandDetector';
 import { QuickCommand, QuickCommandGroup } from '../types';
 import { executeRemoteCommand, isExecuting } from '../core/sshClient';
-import { getOutputChannelManager } from '../utils/outputChannel';
+import { getOutputChannelManager, UnifiedOutputChannel } from '../utils/outputChannel';
 import { getConfig } from '../config';
 
 export class QuickCommandItem extends vscode.TreeItem {
@@ -87,13 +87,13 @@ export class QuickCommandsTreeView {
     private treeProvider: QuickCommandsTreeProvider;
     private treeView: vscode.TreeView<QuickCommandItem>;
     private detector: QuickCommandDetector;
-    private pluginChannel: vscode.LogOutputChannel;
-    private testOutputChannel: vscode.LogOutputChannel;
+    private pluginChannel: UnifiedOutputChannel;
+    private testOutputChannel: UnifiedOutputChannel;
 
     constructor() {
         this.detector = new QuickCommandDetector();
         const channelManager = getOutputChannelManager();
-        this.pluginChannel = channelManager.getAutoTestChannel();
+        this.pluginChannel = channelManager.getRemoteTestChannel();
         this.testOutputChannel = channelManager.getTestOutputChannel();
         this.treeProvider = new QuickCommandsTreeProvider(this.detector);
         this.treeView = vscode.window.createTreeView('autotestQuickCommands', {
@@ -121,7 +121,7 @@ export class QuickCommandsTreeView {
         const cmd = item.quickCommand;
         const project = cmd.project;
         const config = getConfig();
-        const clearOutput = config.clearOutputBeforeRun ?? true;
+        const clearOutput = cmd.clearOutputBeforeRun ?? config.clearOutputBeforeRun ?? true;
 
         try {
             await vscode.window.withProgress({

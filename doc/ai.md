@@ -100,11 +100,11 @@ AIChat.sendMessageStream(userMessage, callback)
    QWen API  OpenAI API  Self-hosted
 ```
 
-**模型自动识别**：
-- 系统根据模型名称自动选择对应的 API 格式
-- QWen 模型：名称包含 `qwen`（如 qwen-turbo、qwen-plus、qwen-max）
-- OpenAI 模型：名称包含 `gpt`（如 gpt-3.5-turbo、gpt-4、gpt-4o）
-- 其他模型：使用自定义 `apiUrl`，采用 OpenAI 兼容格式
+**Provider 配置**：
+- 可通过 `provider` 字段显式指定 API 格式
+- 未配置时根据模型名称自动识别：
+  - QWen 模型：名称包含 `qwen`
+  - 其他模型：默认使用 `openai` 格式
 
 ## 3. 类型定义
 
@@ -146,6 +146,8 @@ interface AIProvider {
 ### 3.4 配置接口
 
 ```typescript
+type AIProviderType = 'qwen' | 'openai';
+
 interface AIConfig {
     models: AIModelConfig[];    // 模型列表
     defaultModel?: string;      // 默认模型名称
@@ -153,11 +155,20 @@ interface AIConfig {
 }
 
 interface AIModelConfig {
-    name: string;               // 模型名称（用于识别 API 格式）
+    name: string;               // 模型名称
+    provider?: AIProviderType;  // 提供商类型（可选，未配置时自动识别）
     apiKey?: string;            // API 密钥（可选，自部署模型可能不需要）
     apiUrl?: string;            // 自定义 API 地址（可选）
 }
 ```
+
+**provider 说明**：
+- `qwen`：通义千问 API 格式
+- `openai`：OpenAI API 格式（兼容大多数本地模型如 Ollama、vLLM）
+
+**模型自动识别**（未配置 provider 时）：
+- QWen 模型：名称包含 `qwen`
+- 其他模型：默认使用 `openai` 格式
 
 ### 3.5 会话接口
 
@@ -260,10 +271,12 @@ export class SessionManager {
     "models": [
       {
         "name": "qwen-turbo",
+        "provider": "qwen",
         "apiKey": "your-qwen-api-key"
       },
       {
         "name": "gpt-4",
+        "provider": "openai",
         "apiKey": "your-openai-api-key",
         "apiUrl": "https://api.openai.com/v1/chat/completions"
       }
@@ -283,6 +296,7 @@ export class SessionManager {
     "models": [
       {
         "name": "local-llm",
+        "provider": "openai",
         "apiUrl": "http://localhost:8000/v1/chat/completions"
       }
     ],
@@ -314,7 +328,8 @@ export class SessionManager {
 | 字段 | 必填 | 说明 |
 |------|------|------|
 | `models` | 是 | 模型配置列表 |
-| `models[].name` | 是 | 模型名称，系统根据名称自动识别 API 格式 |
+| `models[].name` | 是 | 模型名称 |
+| `models[].provider` | 否 | 提供商类型：`qwen` 或 `openai`，未配置时自动识别 |
 | `models[].apiKey` | 否 | API 密钥，自部署模型可能不需要 |
 | `models[].apiUrl` | 否 | 自定义 API 地址 |
 | `defaultModel` | 否 | 默认使用的模型名称，默认使用第一个模型 |
