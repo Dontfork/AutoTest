@@ -126,7 +126,7 @@ export class QuickCommandsTreeView {
         try {
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `AutoTest - 执行: ${cmd.name}`,
+                title: `RemoteTest - 执行: ${cmd.name}`,
                 cancellable: false
             }, async () => {
                 await executeRemoteCommand(

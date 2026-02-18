@@ -109,13 +109,13 @@ describe('Types Module - 类型定义模块测试', () => {
                 password: 'password',
                 privateKeyPath: '',
                 localProjectPath: '',
-                remoteDirectory: '/tmp/autotest'
+                remoteDirectory: '/tmp/RemoteTest'
             };
             
             assert.strictEqual(config.host, '192.168.1.100');
             assert.strictEqual(config.port, 22);
             assert.strictEqual(config.username, 'root');
-            assert.strictEqual(config.remoteDirectory, '/tmp/autotest');
+            assert.strictEqual(config.remoteDirectory, '/tmp/RemoteTest');
         });
 
         it('验证SSH密码认证配置 - 使用password进行认证', () => {
@@ -126,7 +126,7 @@ describe('Types Module - 类型定义模块测试', () => {
                 password: 'mypassword',
                 privateKeyPath: '',
                 localProjectPath: '',
-                remoteDirectory: '/home/testuser/autotest'
+                remoteDirectory: '/home/testuser/RemoteTest'
             };
             
             assert.strictEqual(config.password, 'mypassword');
@@ -141,7 +141,7 @@ describe('Types Module - 类型定义模块测试', () => {
                 password: '',
                 privateKeyPath: '/home/user/.ssh/id_rsa',
                 localProjectPath: '',
-                remoteDirectory: '/tmp/autotest'
+                remoteDirectory: '/tmp/RemoteTest'
             };
             
             assert.strictEqual(config.privateKeyPath, '/home/user/.ssh/id_rsa');
@@ -156,7 +156,7 @@ describe('Types Module - 类型定义模块测试', () => {
                 password: 'password',
                 privateKeyPath: '',
                 localProjectPath: '',
-                remoteDirectory: '/tmp/autotest'
+                remoteDirectory: '/tmp/RemoteTest'
             };
             
             assert.strictEqual(config.port, 2222);
@@ -184,7 +184,7 @@ describe('Types Module - 类型定义模块测试', () => {
                 password: 'password',
                 privateKeyPath: '',
                 localProjectPath: '',
-                remoteDirectory: '/tmp/autotest'
+                remoteDirectory: '/tmp/RemoteTest'
             };
             
             assert.strictEqual(Object.keys(config).includes('logDirectory'), false);
@@ -207,26 +207,26 @@ describe('Types Module - 类型定义模块测试', () => {
 
         it('验证深层目录路径映射 - 多层嵌套目录', () => {
             const localProjectPath = '/home/user/project';
-            const remoteDirectory = '/opt/autotest';
+            const remoteDirectory = '/opt/RemoteTest';
             const localFilePath = '/home/user/project/tests/unit/services/auth.test.js';
             
             const relativePath = path.relative(localProjectPath, localFilePath);
             const posixRelativePath = relativePath.split(path.sep).join(path.posix.sep);
             const remotePath = path.posix.join(remoteDirectory, posixRelativePath);
             
-            assert.strictEqual(remotePath, '/opt/autotest/tests/unit/services/auth.test.js');
+            assert.strictEqual(remotePath, '/opt/RemoteTest/tests/unit/services/auth.test.js');
         });
 
         it('验证根目录文件映射 - 文件在工程根目录', () => {
             const localProjectPath = '/home/user/project';
-            const remoteDirectory = '/opt/autotest';
+            const remoteDirectory = '/opt/RemoteTest';
             const localFilePath = '/home/user/project/package.json';
             
             const relativePath = path.relative(localProjectPath, localFilePath);
             const posixRelativePath = relativePath.split(path.sep).join(path.posix.sep);
             const remotePath = path.posix.join(remoteDirectory, posixRelativePath);
             
-            assert.strictEqual(remotePath, '/opt/autotest/package.json');
+            assert.strictEqual(remotePath, '/opt/RemoteTest/package.json');
         });
 
         it('验证路径分隔符转换 - Windows路径转POSIX路径', () => {
@@ -265,12 +265,12 @@ describe('Types Module - 类型定义模块测试', () => {
         it('验证远程命令配置 - 通过SSH执行的命令', () => {
             const config: CommandConfig = {
                 name: '测试命令',
-                executeCommand: 'cd /tmp/autotest && npm test',
+                executeCommand: 'cd /tmp/RemoteTest && npm test',
                 includePatterns: ['error'],
                 excludePatterns: []
             };
             
-            assert.ok(config.executeCommand.includes('/tmp/autotest'));
+            assert.ok(config.executeCommand.includes('/tmp/RemoteTest'));
         });
 
         it('验证带变量的命令配置 - 支持文件路径变量替换', () => {
@@ -320,18 +320,18 @@ describe('Types Module - 类型定义模块测试', () => {
     describe('CommandVariables - 命令变量接口', () => {
         it('验证CommandVariables接口包含所有变量 - 文件路径相关变量', () => {
             const variables: CommandVariables = {
-                filePath: '/tmp/autotest/tests/test_example.py',
+                filePath: '/tmp/RemoteTest/tests/test_example.py',
                 fileName: 'test_example.py',
-                fileDir: '/tmp/autotest/tests',
+                fileDir: '/tmp/RemoteTest/tests',
                 localPath: 'D:\\project\\tests\\test_example.py',
                 localDir: 'D:\\project\\tests',
                 localFileName: 'test_example.py',
-                remoteDir: '/tmp/autotest'
+                remoteDir: '/tmp/RemoteTest'
             };
             
-            assert.strictEqual(variables.filePath, '/tmp/autotest/tests/test_example.py');
+            assert.strictEqual(variables.filePath, '/tmp/RemoteTest/tests/test_example.py');
             assert.strictEqual(variables.fileName, 'test_example.py');
-            assert.strictEqual(variables.fileDir, '/tmp/autotest/tests');
+            assert.strictEqual(variables.fileDir, '/tmp/RemoteTest/tests');
         });
 
         it('验证远程路径变量 - filePath为远程文件完整路径', () => {
@@ -366,16 +366,16 @@ describe('Types Module - 类型定义模块测试', () => {
 
         it('验证远程工程目录变量 - remoteDir为配置的远程目录', () => {
             const variables: CommandVariables = {
-                filePath: '/opt/autotest/tests/api/test_user.py',
+                filePath: '/opt/RemoteTest/tests/api/test_user.py',
                 fileName: 'test_user.py',
-                fileDir: '/opt/autotest/tests/api',
+                fileDir: '/opt/RemoteTest/tests/api',
                 localPath: '/home/dev/project/tests/api/test_user.py',
                 localDir: '/home/dev/project/tests/api',
                 localFileName: 'test_user.py',
-                remoteDir: '/opt/autotest'
+                remoteDir: '/opt/RemoteTest'
             };
             
-            assert.strictEqual(variables.remoteDir, '/opt/autotest');
+            assert.strictEqual(variables.remoteDir, '/opt/RemoteTest');
         });
     });
 
@@ -450,14 +450,14 @@ describe('Types Module - 类型定义模块测试', () => {
             const config: LogsConfig = {
                 directories: [
                     { name: '应用日志', path: '/var/logs' },
-                    { name: '测试日志', path: '/var/log/autotest' }
+                    { name: '测试日志', path: '/var/log/RemoteTest' }
                 ],
                 downloadPath: './downloads'
             };
             
             assert.strictEqual(config.directories.length, 2);
             assert.strictEqual(config.directories[0].name, '应用日志');
-            assert.strictEqual(config.directories[1].path, '/var/log/autotest');
+            assert.strictEqual(config.directories[1].path, '/var/log/RemoteTest');
         });
 
         it('验证日志下载路径配置 - 本地保存路径', () => {
@@ -525,7 +525,7 @@ describe('Types Module - 类型定义模块测试', () => {
                         password: 'password',
                         privateKeyPath: '',
                         localProjectPath: '',
-                        remoteDirectory: '/tmp/autotest'
+                        remoteDirectory: '/tmp/RemoteTest'
                     },
                     commands: [{
                         name: '测试命令',
@@ -630,17 +630,17 @@ describe('Types Module - 类型定义模块测试', () => {
                         password: '',
                         privateKeyPath: '/home/deploy/.ssh/id_rsa',
                         localProjectPath: '',
-                        remoteDirectory: '/opt/autotest'
+                        remoteDirectory: '/opt/RemoteTest'
                     },
                     commands: [{
                         name: '测试命令',
-                        executeCommand: 'cd /opt/autotest && ./run_tests.sh',
+                        executeCommand: 'cd /opt/RemoteTest && ./run_tests.sh',
                         includePatterns: ['error', 'fail'],
                         excludePatterns: []
                     }],
                     logs: {
                         directories: [
-                            { name: '应用日志', path: '/var/log/autotest' },
+                            { name: '应用日志', path: '/var/log/RemoteTest' },
                             { name: '系统日志', path: '/var/log/system' }
                         ],
                         downloadPath: './logs'
@@ -655,7 +655,7 @@ describe('Types Module - 类型定义模块测试', () => {
             };
             
             assert.strictEqual(config.projects[0].server.privateKeyPath, '/home/deploy/.ssh/id_rsa');
-            assert.strictEqual(config.projects[0].server.remoteDirectory, '/opt/autotest');
+            assert.strictEqual(config.projects[0].server.remoteDirectory, '/opt/RemoteTest');
             assert.strictEqual(config.projects[0].logs?.directories.length, 2);
             assert.strictEqual(config.ai.provider, 'openai');
             assert.strictEqual(config.refreshInterval, 10000);

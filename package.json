@@ -1,6 +1,6 @@
 {
-  "name": "autotest",
-  "displayName": "AutoTest",
+  "name": "RemoteTest",
+  "displayName": "RemoteTest",
   "description": "VSCode插件，实现文件上传、命令执行、日志监控和AI对话功能",
   "version": "1.0.0",
   "engines": {
@@ -17,16 +17,16 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "autotest-ai-chat",
-          "title": "AutoTest AI",
+          "id": "RemoteTest-ai-chat",
+          "title": "RemoteTest AI",
           "icon": "resources/icon.svg"
         }
       ]
     },
     "views": {
-      "autotest-ai-chat": [
+      "RemoteTest-ai-chat": [
         {
-          "id": "autotest-ai-view",
+          "id": "RemoteTest-ai-view",
           "name": "AI 对话",
           "type": "webview"
         }
@@ -48,65 +48,65 @@
     },
     "commands": [
       {
-        "command": "autotest.runTestCase",
-        "title": "AutoTest: 运行"
+        "command": "RemoteTest.runTestCase",
+        "title": "RemoteTest: 运行"
       },
       {
-        "command": "autotest.uploadFile",
-        "title": "AutoTest: 上传文件"
+        "command": "RemoteTest.uploadFile",
+        "title": "RemoteTest: 上传文件"
       },
       {
-        "command": "autotest.syncFile",
-        "title": "AutoTest: 同步文件"
+        "command": "RemoteTest.syncFile",
+        "title": "RemoteTest: 同步文件"
       },
       {
-        "command": "autotest.refreshLogs",
-        "title": "AutoTest: 刷新日志列表",
+        "command": "RemoteTest.refreshLogs",
+        "title": "RemoteTest: 刷新日志列表",
         "icon": "$(refresh)"
       },
       {
-        "command": "autotest.downloadLog",
+        "command": "RemoteTest.downloadLog",
         "title": "下载日志文件"
       },
       {
-        "command": "autotest.openLog",
+        "command": "RemoteTest.openLog",
         "title": "打开日志文件"
       },
       {
-        "command": "autotest.reloadConfig",
-        "title": "AutoTest: 刷新配置",
+        "command": "RemoteTest.reloadConfig",
+        "title": "RemoteTest: 刷新配置",
         "icon": "$(sync)"
       },
       {
-        "command": "autotest.openConfig",
-        "title": "AutoTest: 打开配置文件",
+        "command": "RemoteTest.openConfig",
+        "title": "RemoteTest: 打开配置文件",
         "icon": "$(gear)"
       },
       {
-        "command": "autotest.refreshChanges",
-        "title": "AutoTest: 刷新变更列表",
+        "command": "RemoteTest.refreshChanges",
+        "title": "RemoteTest: 刷新变更列表",
         "icon": "$(refresh)"
       },
       {
-        "command": "autotest.uploadProjectChanges",
+        "command": "RemoteTest.uploadProjectChanges",
         "title": "上传此项目所有变更",
         "icon": "$(cloud-upload)"
       },
       {
-        "command": "autotest.uploadSelectedChange",
+        "command": "RemoteTest.uploadSelectedChange",
         "title": "上传此文件"
       },
       {
-        "command": "autotest.openChangeFile",
+        "command": "RemoteTest.openChangeFile",
         "title": "打开文件"
       },
       {
-        "command": "autotest.refreshQuickCommands",
-        "title": "AutoTest: 刷新快捷命令",
+        "command": "RemoteTest.refreshQuickCommands",
+        "title": "RemoteTest: 刷新快捷命令",
         "icon": "$(refresh)"
       },
       {
-        "command": "autotest.executeQuickCommand",
+        "command": "RemoteTest.executeQuickCommand",
         "title": "执行命令",
         "icon": "$(play)"
       }
@@ -114,84 +114,84 @@
     "menus": {
       "view/title": [
         {
-          "command": "autotest.refreshQuickCommands",
+          "command": "RemoteTest.refreshQuickCommands",
           "when": "view == autotestQuickCommands",
           "group": "navigation@1"
         },
         {
-          "command": "autotest.refreshLogs",
+          "command": "RemoteTest.refreshLogs",
           "when": "view == autotestLogs",
           "group": "navigation@1"
         },
         {
-          "command": "autotest.reloadConfig",
+          "command": "RemoteTest.reloadConfig",
           "when": "view == autotestLogs",
           "group": "navigation@2"
         },
         {
-          "command": "autotest.openConfig",
+          "command": "RemoteTest.openConfig",
           "when": "view == autotestLogs",
           "group": "navigation@3"
         },
         {
-          "command": "autotest.refreshChanges",
+          "command": "RemoteTest.refreshChanges",
           "when": "view == autotestChanges",
           "group": "navigation@1"
         }
       ],
       "view/item/context": [
         {
-          "command": "autotest.executeQuickCommand",
+          "command": "RemoteTest.executeQuickCommand",
           "when": "view == autotestQuickCommands && viewItem == quickCommand",
           "group": "inline@1"
         },
         {
-          "command": "autotest.downloadLog",
+          "command": "RemoteTest.downloadLog",
           "when": "view == autotestLogs && viewItem == logFile",
           "group": "inline@1"
         },
         {
-          "command": "autotest.openLog",
+          "command": "RemoteTest.openLog",
           "when": "view == autotestLogs && viewItem == logFile",
           "group": "inline@2"
         },
         {
-          "command": "autotest.uploadProjectChanges",
+          "command": "RemoteTest.uploadProjectChanges",
           "when": "view == autotestChanges && viewItem == changeGroup",
           "group": "inline@1"
         },
         {
-          "command": "autotest.uploadSelectedChange",
+          "command": "RemoteTest.uploadSelectedChange",
           "when": "view == autotestChanges && viewItem == change",
           "group": "inline@1"
         },
         {
-          "command": "autotest.openChangeFile",
+          "command": "RemoteTest.openChangeFile",
           "when": "view == autotestChanges && viewItem == change",
           "group": "inline@2"
         }
       ],
       "explorer/context": [
         {
-          "command": "autotest.runTestCase",
-          "group": "autotest@1"
+          "command": "RemoteTest.runTestCase",
+          "group": "RemoteTest@1"
         },
         {
-          "command": "autotest.uploadFile",
-          "group": "autotest@2"
+          "command": "RemoteTest.uploadFile",
+          "group": "RemoteTest@2"
         },
         {
-          "command": "autotest.syncFile",
-          "group": "autotest@3"
+          "command": "RemoteTest.syncFile",
+          "group": "RemoteTest@3"
         }
       ]
     },
     "configuration": {
-      "title": "AutoTest",
+      "title": "RemoteTest",
       "properties": {
-        "autotest.configPath": {
+        "RemoteTest.configPath": {
           "type": "string",
-          "default": "autotest-config.json",
+          "default": "RemoteTest-config.json",
           "description": "配置文件路径"
         }
       }
@@ -229,6 +229,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Dontfork/AutoTest.git"
+    "url": "https://github.com/Dontfork/RemoteTest.git"
   }
 }

@@ -49,7 +49,7 @@ export class LogTreeItem extends vscode.TreeItem {
             this.contextValue = 'logFile';
             this.iconPath = new vscode.ThemeIcon('file-text');
             this.command = {
-                command: 'autotest.downloadLog',
+                command: 'RemoteTest.downloadLog',
                 title: '下载日志',
                 arguments: [this]
             };

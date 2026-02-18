@@ -69,30 +69,30 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
         it('{filePath}变量替换 - 替换为远程文件完整路径', () => {
             const command = 'pytest {filePath}';
             const variables = {
-                filePath: '/tmp/autotest/tests/test_example.py',
+                filePath: '/tmp/RemoteTest/tests/test_example.py',
                 fileName: 'test_example.py',
-                fileDir: '/tmp/autotest/tests',
+                fileDir: '/tmp/RemoteTest/tests',
                 localPath: 'D:\\project\\tests\\test_example.py',
                 localDir: 'D:\\project\\tests',
                 localFileName: 'test_example.py',
-                remoteDir: '/tmp/autotest'
+                remoteDir: '/tmp/RemoteTest'
             };
             
             const result = replaceCommandVariables(command, variables);
             
-            assert.strictEqual(result, 'pytest /tmp/autotest/tests/test_example.py');
+            assert.strictEqual(result, 'pytest /tmp/RemoteTest/tests/test_example.py');
         });
 
         it('{fileName}变量替换 - 替换为远程文件名', () => {
             const command = 'echo "Running {fileName}"';
             const variables = {
-                filePath: '/tmp/autotest/tests/test_example.py',
+                filePath: '/tmp/RemoteTest/tests/test_example.py',
                 fileName: 'test_example.py',
-                fileDir: '/tmp/autotest/tests',
+                fileDir: '/tmp/RemoteTest/tests',
                 localPath: 'D:\\project\\tests\\test_example.py',
                 localDir: 'D:\\project\\tests',
                 localFileName: 'test_example.py',
-                remoteDir: '/tmp/autotest'
+                remoteDir: '/tmp/RemoteTest'
             };
             
             const result = replaceCommandVariables(command, variables);
@@ -103,30 +103,30 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
         it('{fileDir}变量替换 - 替换为远程文件所在目录', () => {
             const command = 'cd {fileDir} && pytest {fileName}';
             const variables = {
-                filePath: '/tmp/autotest/tests/test_example.py',
+                filePath: '/tmp/RemoteTest/tests/test_example.py',
                 fileName: 'test_example.py',
-                fileDir: '/tmp/autotest/tests',
+                fileDir: '/tmp/RemoteTest/tests',
                 localPath: 'D:\\project\\tests\\test_example.py',
                 localDir: 'D:\\project\\tests',
                 localFileName: 'test_example.py',
-                remoteDir: '/tmp/autotest'
+                remoteDir: '/tmp/RemoteTest'
             };
             
             const result = replaceCommandVariables(command, variables);
             
-            assert.strictEqual(result, 'cd /tmp/autotest/tests && pytest test_example.py');
+            assert.strictEqual(result, 'cd /tmp/RemoteTest/tests && pytest test_example.py');
         });
 
         it('{localPath}变量替换 - 替换为本地文件完整路径', () => {
             const command = 'echo "Local: {localPath}"';
             const variables = {
-                filePath: '/tmp/autotest/tests/test_example.py',
+                filePath: '/tmp/RemoteTest/tests/test_example.py',
                 fileName: 'test_example.py',
-                fileDir: '/tmp/autotest/tests',
+                fileDir: '/tmp/RemoteTest/tests',
                 localPath: 'D:\\project\\tests\\test_example.py',
                 localDir: 'D:\\project\\tests',
                 localFileName: 'test_example.py',
-                remoteDir: '/tmp/autotest'
+                remoteDir: '/tmp/RemoteTest'
             };
             
             const result = replaceCommandVariables(command, variables);
@@ -137,13 +137,13 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
         it('{localDir}变量替换 - 替换为本地文件所在目录', () => {
             const command = 'echo "Local Dir: {localDir}"';
             const variables = {
-                filePath: '/tmp/autotest/tests/test_example.py',
+                filePath: '/tmp/RemoteTest/tests/test_example.py',
                 fileName: 'test_example.py',
-                fileDir: '/tmp/autotest/tests',
+                fileDir: '/tmp/RemoteTest/tests',
                 localPath: 'D:\\project\\tests\\test_example.py',
                 localDir: 'D:\\project\\tests',
                 localFileName: 'test_example.py',
-                remoteDir: '/tmp/autotest'
+                remoteDir: '/tmp/RemoteTest'
             };
             
             const result = replaceCommandVariables(command, variables);
@@ -154,13 +154,13 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
         it('{localFileName}变量替换 - 替换为本地文件名', () => {
             const command = 'echo "File: {localFileName}"';
             const variables = {
-                filePath: '/tmp/autotest/tests/test_example.py',
+                filePath: '/tmp/RemoteTest/tests/test_example.py',
                 fileName: 'test_example.py',
-                fileDir: '/tmp/autotest/tests',
+                fileDir: '/tmp/RemoteTest/tests',
                 localPath: 'D:\\project\\tests\\test_example.py',
                 localDir: 'D:\\project\\tests',
                 localFileName: 'test_example.py',
-                remoteDir: '/tmp/autotest'
+                remoteDir: '/tmp/RemoteTest'
             };
             
             const result = replaceCommandVariables(command, variables);
@@ -171,41 +171,41 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
         it('{remoteDir}变量替换 - 替换为远程工程目录', () => {
             const command = 'cd {remoteDir} && ls -la';
             const variables = {
-                filePath: '/tmp/autotest/tests/test_example.py',
+                filePath: '/tmp/RemoteTest/tests/test_example.py',
                 fileName: 'test_example.py',
-                fileDir: '/tmp/autotest/tests',
+                fileDir: '/tmp/RemoteTest/tests',
                 localPath: 'D:\\project\\tests\\test_example.py',
                 localDir: 'D:\\project\\tests',
                 localFileName: 'test_example.py',
-                remoteDir: '/tmp/autotest'
+                remoteDir: '/tmp/RemoteTest'
             };
             
             const result = replaceCommandVariables(command, variables);
             
-            assert.strictEqual(result, 'cd /tmp/autotest && ls -la');
+            assert.strictEqual(result, 'cd /tmp/RemoteTest && ls -la');
         });
 
         it('多变量替换 - 同时替换多个变量', () => {
             const command = 'cd {remoteDir} && pytest {fileDir}/{fileName}';
             const variables = {
-                filePath: '/tmp/autotest/tests/test_example.py',
+                filePath: '/tmp/RemoteTest/tests/test_example.py',
                 fileName: 'test_example.py',
-                fileDir: '/tmp/autotest/tests',
+                fileDir: '/tmp/RemoteTest/tests',
                 localPath: 'D:\\project\\tests\\test_example.py',
                 localDir: 'D:\\project\\tests',
                 localFileName: 'test_example.py',
-                remoteDir: '/tmp/autotest'
+                remoteDir: '/tmp/RemoteTest'
             };
             
             const result = replaceCommandVariables(command, variables);
             
-            assert.strictEqual(result, 'cd /tmp/autotest && pytest /tmp/autotest/tests/test_example.py');
+            assert.strictEqual(result, 'cd /tmp/RemoteTest && pytest /tmp/RemoteTest/tests/test_example.py');
         });
 
         it('无变量命令 - 不包含变量的命令保持不变', () => {
             const command = 'npm test';
             const variables = {
-                filePath: '/tmp/autotest/tests/test_example.py',
+                filePath: '/tmp/RemoteTest/tests/test_example.py',
                 fileName: 'test_example.py'
             };
             
@@ -217,9 +217,9 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
         it('重复变量替换 - 同一变量出现多次时全部替换', () => {
             const command = 'echo {fileName} && cat {fileName}';
             const variables = {
-                filePath: '/tmp/autotest/tests/test_example.py',
+                filePath: '/tmp/RemoteTest/tests/test_example.py',
                 fileName: 'test_example.py',
-                fileDir: '/tmp/autotest/tests'
+                fileDir: '/tmp/RemoteTest/tests'
             };
             
             const result = replaceCommandVariables(command, variables);
@@ -231,41 +231,41 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
     describe('Build Command Variables - 构建命令变量', () => {
         it('构建变量对象 - 从本地和远程路径生成变量', () => {
             const localFilePath = 'D:\\project\\tests\\test_example.py';
-            const remoteFilePath = '/tmp/autotest/tests/test_example.py';
-            const remoteDir = '/tmp/autotest';
+            const remoteFilePath = '/tmp/RemoteTest/tests/test_example.py';
+            const remoteDir = '/tmp/RemoteTest';
             
             const variables = buildCommandVariables(localFilePath, remoteFilePath, remoteDir);
             
-            assert.strictEqual(variables.filePath, '/tmp/autotest/tests/test_example.py');
+            assert.strictEqual(variables.filePath, '/tmp/RemoteTest/tests/test_example.py');
             assert.strictEqual(variables.fileName, 'test_example.py');
-            assert.strictEqual(variables.fileDir, '/tmp/autotest/tests');
+            assert.strictEqual(variables.fileDir, '/tmp/RemoteTest/tests');
             assert.strictEqual(variables.localPath, 'D:\\project\\tests\\test_example.py');
             assert.strictEqual(variables.localDir, 'D:\\project\\tests');
             assert.strictEqual(variables.localFileName, 'test_example.py');
-            assert.strictEqual(variables.remoteDir, '/tmp/autotest');
+            assert.strictEqual(variables.remoteDir, '/tmp/RemoteTest');
         });
 
         it('深层目录路径 - 正确提取目录层级', () => {
             const localFilePath = 'D:\\project\\src\\utils\\helpers\\test_helper.py';
-            const remoteFilePath = '/tmp/autotest/src/utils/helpers/test_helper.py';
-            const remoteDir = '/tmp/autotest';
+            const remoteFilePath = '/tmp/RemoteTest/src/utils/helpers/test_helper.py';
+            const remoteDir = '/tmp/RemoteTest';
             
             const variables = buildCommandVariables(localFilePath, remoteFilePath, remoteDir);
             
             assert.strictEqual(variables.fileName, 'test_helper.py');
-            assert.strictEqual(variables.fileDir, '/tmp/autotest/src/utils/helpers');
+            assert.strictEqual(variables.fileDir, '/tmp/RemoteTest/src/utils/helpers');
             assert.strictEqual(variables.localFileName, 'test_helper.py');
         });
 
         it('根目录文件 - 文件在工程根目录', () => {
             const localFilePath = 'D:\\project\\main.py';
-            const remoteFilePath = '/tmp/autotest/main.py';
-            const remoteDir = '/tmp/autotest';
+            const remoteFilePath = '/tmp/RemoteTest/main.py';
+            const remoteDir = '/tmp/RemoteTest';
             
             const variables = buildCommandVariables(localFilePath, remoteFilePath, remoteDir);
             
             assert.strictEqual(variables.fileName, 'main.py');
-            assert.strictEqual(variables.fileDir, '/tmp/autotest');
+            assert.strictEqual(variables.fileDir, '/tmp/RemoteTest');
         });
     });
 
@@ -341,12 +341,12 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
 
         it('验证远程命令配置 - 通过SSH执行的命令', () => {
             const config = {
-                executeCommand: 'cd /tmp/autotest && npm test',
+                executeCommand: 'cd /tmp/RemoteTest && npm test',
                 filterPatterns: ['\\[error\\]'],
                 filterMode: 'include' as const
             };
             
-            assert.ok(config.executeCommand.includes('/tmp/autotest'));
+            assert.ok(config.executeCommand.includes('/tmp/RemoteTest'));
             assert.strictEqual(config.filterMode, 'include');
         });
 
@@ -467,11 +467,11 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
         });
 
         it('远程目录切换 - 命令包含cd和远程目录', () => {
-            const remoteDirectory = '/tmp/autotest';
+            const remoteDirectory = '/tmp/RemoteTest';
             const command = 'npm test';
             const fullCommand = `cd ${remoteDirectory} && ${command}`;
             
-            assert.ok(fullCommand.includes('cd /tmp/autotest'));
+            assert.ok(fullCommand.includes('cd /tmp/RemoteTest'));
             assert.ok(fullCommand.includes('npm test'));
         });
     });
@@ -511,7 +511,7 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
 
         it('远程目录配置 - remoteDirectory非空', () => {
             const config = {
-                remoteDirectory: '/tmp/autotest'
+                remoteDirectory: '/tmp/RemoteTest'
             };
             
             assert.ok(config.remoteDirectory.length > 0);
@@ -521,11 +521,11 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
         it('上传路径拼接 - 本地文件名映射到远程目录', () => {
             const path = require('path');
             const localPath = '/local/path/test.txt';
-            const remoteDirectory = '/tmp/autotest';
+            const remoteDirectory = '/tmp/RemoteTest';
             const fileName = path.basename(localPath);
             const remotePath = path.posix.join(remoteDirectory, fileName);
             
-            assert.strictEqual(remotePath, '/tmp/autotest/test.txt');
+            assert.strictEqual(remotePath, '/tmp/RemoteTest/test.txt');
         });
     });
 
@@ -558,7 +558,7 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
                     host: '192.168.1.100',
                     port: 22,
                     username: 'root',
-                    remoteDirectory: '/tmp/autotest'
+                    remoteDirectory: '/tmp/RemoteTest'
                 },
                 command: {
                     executeCommand: 'pytest {filePath}',
@@ -623,10 +623,10 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
     });
 
     describe('Output Channel Integration - 输出通道集成', () => {
-        it('输出通道名称 - AutoTest', () => {
-            const channelName = 'AutoTest';
+        it('输出通道名称 - RemoteTest', () => {
+            const channelName = 'RemoteTest';
             
-            assert.strictEqual(channelName, 'AutoTest');
+            assert.strictEqual(channelName, 'RemoteTest');
         });
 
         it('日志格式 - 包含时间戳和级别', () => {
@@ -709,34 +709,34 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
             it('本地路径映射到远程路径 - 正确计算相对路径', () => {
                 const localProjectPath = 'D:\\project';
                 const localFilePath = 'D:\\project\\tests\\test_example.py';
-                const remoteDirectory = '/tmp/autotest';
+                const remoteDirectory = '/tmp/RemoteTest';
                 
                 const relativePath = localFilePath.replace(localProjectPath, '').replace(/\\/g, '/');
                 const remotePath = remoteDirectory + relativePath;
                 
-                assert.strictEqual(remotePath, '/tmp/autotest/tests/test_example.py');
+                assert.strictEqual(remotePath, '/tmp/RemoteTest/tests/test_example.py');
             });
 
             it('根目录文件映射 - 文件在工程根目录', () => {
                 const localProjectPath = 'D:\\project';
                 const localFilePath = 'D:\\project\\main.py';
-                const remoteDirectory = '/tmp/autotest';
+                const remoteDirectory = '/tmp/RemoteTest';
                 
                 const relativePath = localFilePath.replace(localProjectPath, '').replace(/\\/g, '/');
                 const remotePath = remoteDirectory + relativePath;
                 
-                assert.strictEqual(remotePath, '/tmp/autotest/main.py');
+                assert.strictEqual(remotePath, '/tmp/RemoteTest/main.py');
             });
 
             it('深层目录映射 - 多层嵌套目录', () => {
                 const localProjectPath = 'D:\\project';
                 const localFilePath = 'D:\\project\\src\\utils\\helpers\\test_helper.py';
-                const remoteDirectory = '/tmp/autotest';
+                const remoteDirectory = '/tmp/RemoteTest';
                 
                 const relativePath = localFilePath.replace(localProjectPath, '').replace(/\\/g, '/');
                 const remotePath = remoteDirectory + relativePath;
                 
-                assert.strictEqual(remotePath, '/tmp/autotest/src/utils/helpers/test_helper.py');
+                assert.strictEqual(remotePath, '/tmp/RemoteTest/src/utils/helpers/test_helper.py');
             });
         });
 
@@ -800,9 +800,9 @@ describe('CommandExecutor Module - 命令执行模块测试', () => {
             });
 
             it('路径映射 - 远程路径对应本地路径', () => {
-                const remotePath = '/tmp/autotest/tests/test_example.py';
+                const remotePath = '/tmp/RemoteTest/tests/test_example.py';
                 const localProjectPath = 'D:\\project';
-                const remoteDirectory = '/tmp/autotest';
+                const remoteDirectory = '/tmp/RemoteTest';
                 
                 const relativePath = remotePath.replace(remoteDirectory, '');
                 const localFilePath = localProjectPath + relativePath.replace(/\//g, '\\');

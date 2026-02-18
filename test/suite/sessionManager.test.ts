@@ -575,7 +575,7 @@ describe('SessionManager Workspace Storage - 工作区存储测试', () => {
         const sourcePath = path.join(__dirname, '..', '..', '..', 'src', 'ai', 'sessionManager.ts');
         const source = fs.readFileSync(sourcePath, 'utf-8');
         assert.ok(source.includes('workspaceFolders'));
-        assert.ok(source.includes('.autotest'));
+        assert.ok(source.includes('.RemoteTest'));
     });
 
     it('无工作区时应回退到全局存储', () => {

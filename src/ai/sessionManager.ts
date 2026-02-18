@@ -21,7 +21,7 @@ export class SessionManager {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (workspaceFolders && workspaceFolders.length > 0) {
             const workspacePath = workspaceFolders[0].uri.fsPath;
-            return path.join(workspacePath, '.autotest', 'chat-sessions');
+            return path.join(workspacePath, '.RemoteTest', 'chat-sessions');
         }
         return path.join(context.globalStorageUri.fsPath, 'chat-sessions');
     }

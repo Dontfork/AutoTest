@@ -1,8 +1,8 @@
-# AutoTest 插件设计文档
+# RemoteTest 插件设计文档
 
 ## 1. 概述
 
-AutoTest 是一款 VSCode 插件，旨在简化测试工作流程，提供文件上传、命令执行、日志监控和 AI 对话功能。插件采用模块化设计，支持多工程多环境配置，通过 SSH/SCP 协议与远程服务器交互，实现安全的文件传输和命令执行。
+RemoteTest 是一款 VSCode 插件，旨在简化测试工作流程，提供文件上传、命令执行、日志监控和 AI 对话功能。插件采用模块化设计，支持多工程多环境配置，通过 SSH/SCP 协议与远程服务器交互，实现安全的文件传输和命令执行。
 
 ## 2. 系统架构
 
@@ -64,7 +64,7 @@ AutoTest 是一款 VSCode 插件，旨在简化测试工作流程，提供文件
 
 | 通道名称 | 用途 | 内容示例 |
 |----------|------|----------|
-| `AutoTest` | 插件自身信息输出 | 配置验证结果、Git 检测日志、错误信息、调试信息 |
+| `RemoteTest` | 插件自身信息输出 | 配置验证结果、Git 检测日志、错误信息、调试信息 |
 | `TestOutput` | 命令执行输出 | 远程服务器返回的命令执行结果、测试用例输出 |
 
 ### 4.2 约束规则
@@ -72,7 +72,7 @@ AutoTest 是一款 VSCode 插件，旨在简化测试工作流程，提供文件
 1. **禁止直接创建输出通道**：所有模块必须通过 `OutputChannelManager` 获取输出通道
 2. **单例模式**：`OutputChannelManager` 使用单例模式，确保通道只创建一次
 3. **用途分离**：
-   - `AutoTest` 通道：插件内部状态、配置信息、错误日志
+   - `RemoteTest` 通道：插件内部状态、配置信息、错误日志
    - `TestOutput` 通道：用户命令执行结果、测试输出
 
 ### 4.3 使用方式
@@ -92,8 +92,8 @@ testOutputChannel.appendLine('测试执行结果: PASSED');
 ### 4.4 违规示例（禁止）
 
 ```typescript
-const channel = vscode.window.createOutputChannel('AutoTest Git检测');
-const channel = vscode.window.createOutputChannel('AutoTest 配置验证');
+const channel = vscode.window.createOutputChannel('RemoteTest Git检测');
+const channel = vscode.window.createOutputChannel('RemoteTest 配置验证');
 const channel = vscode.window.createOutputChannel('TestOutput');
 ```
 
@@ -110,7 +110,7 @@ interface AutoTestConfig {
     refreshInterval?: number;   // 日志刷新间隔（全局，毫秒）
 }
 
-interface ProjectConfig {
+interface ProjectConfig {d
     name: string;               // 工程名称
     localPath?: string;         // 本地工程路径（可选，用于路径匹配）
     enabled?: boolean;          // 是否启用（默认 true）
@@ -122,7 +122,7 @@ interface ProjectConfig {
 
 ### 5.2 配置文件位置
 
-`{workspace}/.vscode/autotest-config.json` 或 `{workspace}/autotest-config.json`
+`{workspace}/.vscode/RemoteTest-config.json` 或 `{workspace}/RemoteTest-config.json`
 
 ### 5.3 配置示例
 
@@ -384,13 +384,13 @@ interface ProjectConfig {
 
 | 变量 | 说明 | 示例值 |
 |------|------|--------|
-| `{filePath}` | 远程文件完整路径 | `/tmp/autotest/tests/test_example.py` |
+| `{filePath}` | 远程文件完整路径 | `/tmp/RemoteTest/tests/test_example.py` |
 | `{fileName}` | 远程文件名 | `test_example.py` |
-| `{fileDir}` | 远程文件所在目录 | `/tmp/autotest/tests` |
+| `{fileDir}` | 远程文件所在目录 | `/tmp/RemoteTest/tests` |
 | `{localPath}` | 本地文件完整路径 | `D:\project\tests\test_example.py` |
 | `{localDir}` | 本地文件所在目录 | `D:\project\tests` |
 | `{localFileName}` | 本地文件名 | `test_example.py` |
-| `{remoteDir}` | 远程工程目录 | `/tmp/autotest` |
+| `{remoteDir}` | 远程工程目录 | `/tmp/RemoteTest` |
 
 #### 日志配置 (ProjectLogsConfig)
 
@@ -496,20 +496,20 @@ interface ProjectConfig {
 
 | 命令 ID | 描述 | 触发方式 |
 |---------|------|----------|
-| `autotest.runTestCase` | 运行用例（上传并执行） | 右键菜单（文件/目录） |
-| `autotest.uploadFile` | 上传文件（仅上传，不执行） | 右键菜单（文件/目录） |
-| `autotest.syncFile` | 同步文件（从远程下载到本地） | 右键菜单（文件/目录） |
-| `autotest.refreshQuickCommands` | 刷新快捷命令列表 | 工具栏按钮 |
-| `autotest.executeQuickCommand` | 执行快捷命令 | 命令节点按钮 |
-| `autotest.refreshChanges` | 刷新变更列表 | 工具栏按钮 |
-| `autotest.uploadProjectChanges` | 上传项目的所有变更文件 | 项目节点按钮 |
-| `autotest.uploadSelectedChange` | 上传选中的变更文件 | 右键菜单 |
-| `autotest.openChangeFile` | 打开变更文件 | 右键菜单 |
-| `autotest.refreshLogs` | 刷新日志列表 | 工具栏按钮 |
-| `autotest.downloadLog` | 下载日志文件 | 点击日志项 |
-| `autotest.openLog` | 打开日志文件 | 右键菜单 |
-| `autotest.reloadConfig` | 手动刷新配置 | 工具栏按钮 / 命令面板 |
-| `autotest.openConfig` | 打开配置文件 | 工具栏按钮 / 命令面板 |
+| `RemoteTest.runTestCase` | 运行用例（上传并执行） | 右键菜单（文件/目录） |
+| `RemoteTest.uploadFile` | 上传文件（仅上传，不执行） | 右键菜单（文件/目录） |
+| `RemoteTest.syncFile` | 同步文件（从远程下载到本地） | 右键菜单（文件/目录） |
+| `RemoteTest.refreshQuickCommands` | 刷新快捷命令列表 | 工具栏按钮 |
+| `RemoteTest.executeQuickCommand` | 执行快捷命令 | 命令节点按钮 |
+| `RemoteTest.refreshChanges` | 刷新变更列表 | 工具栏按钮 |
+| `RemoteTest.uploadProjectChanges` | 上传项目的所有变更文件 | 项目节点按钮 |
+| `RemoteTest.uploadSelectedChange` | 上传选中的变更文件 | 右键菜单 |
+| `RemoteTest.openChangeFile` | 打开变更文件 | 右键菜单 |
+| `RemoteTest.refreshLogs` | 刷新日志列表 | 工具栏按钮 |
+| `RemoteTest.downloadLog` | 下载日志文件 | 点击日志项 |
+| `RemoteTest.openLog` | 打开日志文件 | 右键菜单 |
+| `RemoteTest.reloadConfig` | 手动刷新配置 | 工具栏按钮 / 命令面板 |
+| `RemoteTest.openConfig` | 打开配置文件 | 工具栏按钮 / 命令面板 |
 
 ### 7.1 右键菜单配置
 
@@ -833,7 +833,7 @@ interface AIModelConfig {
 ## 13. 目录结构
 
 ```
-d:\code\AutoTest
+d:\code\RemoteTest
 ├── .vscode/                # VSCode 配置
 │   ├── launch.json         # 调试配置
 │   └── tasks.json          # 任务配置
@@ -898,7 +898,7 @@ d:\code\AutoTest
 ├── DEVELOPMENT.md          # 开发流程文档
 ├── LICENSE
 ├── README.md               # 项目说明
-├── autotest-config.json    # 默认配置文件
+├── RemoteTest-config.json    # 默认配置文件
 ├── package.json            # 扩展配置
 ├── tsconfig.json           # TypeScript 配置
 └── webpack.config.js       # webpack 配置

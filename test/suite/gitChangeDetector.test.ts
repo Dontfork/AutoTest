@@ -494,7 +494,7 @@ describe('GitChangeDetector Module - Git变更检测模块测试', () => {
 
         it('验证进度显示包含项目名称', () => {
             const projectName = '项目A';
-            const progressTitle = `AutoTest - 上传 ${projectName} 变更文件`;
+            const progressTitle = `RemoteTest - 上传 ${projectName} 变更文件`;
             
             assert.ok(progressTitle.includes('项目A'));
         });

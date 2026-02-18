@@ -2,7 +2,7 @@
 
 ## 1. 模块概述
 
-配置模块负责管理 AutoTest 插件的所有配置信息，支持多工程多环境配置，每个工程拥有独立的服务器配置、命令配置和日志配置。模块支持自动创建默认配置文件、路径冲突检测、旧配置格式转换，并提供配置加载、获取和重载功能。
+配置模块负责管理 RemoteTest 插件的所有配置信息，支持多工程多环境配置，每个工程拥有独立的服务器配置、命令配置和日志配置。模块支持自动创建默认配置文件、路径冲突检测、旧配置格式转换，并提供配置加载、获取和重载功能。
 
 ## 2. 设计方案
 
@@ -28,7 +28,7 @@
 │  └─────────────────┘  └─────────────────┘                  │
 ├─────────────────────────────────────────────────────────────┤
 │                      Configuration File                      │
-│              .vscode/autotest-config.json                    │
+│              .vscode/RemoteTest-config.json                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -36,8 +36,8 @@
 
 模块按以下顺序查找配置文件：
 
-1. `{workspace}/.vscode/autotest-config.json` (优先)
-2. `{workspace}/autotest-config.json` (备选)
+1. `{workspace}/.vscode/RemoteTest-config.json` (优先)
+2. `{workspace}/RemoteTest-config.json` (备选)
 
 ### 2.3 自动创建机制
 
@@ -62,7 +62,7 @@
 |--------|----------|------|
 | `projects[].localPath` | 本地绝对路径 | `D:\Projects\Test` 或 `/home/user/projects/test` |
 | `projects[].server.privateKeyPath` | 本地绝对路径 | `C:\Users\user\.ssh\id_rsa` 或 `/home/user/.ssh/id_rsa` |
-| `projects[].server.remoteDirectory` | 远程绝对路径 | `/tmp/autotest` 或 `/home/user/test` |
+| `projects[].server.remoteDirectory` | 远程绝对路径 | `/tmp/RemoteTest` 或 `/home/user/test` |
 | `projects[].logs.directories[].path` | 远程绝对路径 | `/var/log/app` 或 `/home/user/logs` |
 | `projects[].logs.downloadPath` | 本地绝对路径 | `D:\downloads` 或 `/home/user/downloads` |
 
@@ -113,7 +113,7 @@ interface ServerConfig {
 | username | string | 是 | "root" | SSH 登录用户名 |
 | password | string | 否 | "" | SSH 登录密码（密码认证） |
 | privateKeyPath | string | 否 | "" | SSH 私钥路径（密钥认证，优先于密码） |
-| remoteDirectory | string | 是 | "/tmp/autotest" | 远程工作目录，上传文件的目标目录 |
+| remoteDirectory | string | 是 | "/tmp/RemoteTest" | 远程工作目录，上传文件的目标目录 |
 
 **认证方式**：
 
@@ -184,13 +184,13 @@ executeCommand 支持以下变量，在执行时自动替换为对应的值：
 
 | 变量 | 说明 | 示例值 |
 |------|------|--------|
-| `{filePath}` | 远程文件完整路径 | `/tmp/autotest/tests/test_example.py` |
+| `{filePath}` | 远程文件完整路径 | `/tmp/RemoteTest/tests/test_example.py` |
 | `{fileName}` | 远程文件名 | `test_example.py` |
-| `{fileDir}` | 远程文件所在目录 | `/tmp/autotest/tests` |
+| `{fileDir}` | 远程文件所在目录 | `/tmp/RemoteTest/tests` |
 | `{localPath}` | 本地文件完整路径 | `D:\project\tests\test_example.py` |
 | `{localDir}` | 本地文件所在目录 | `D:\project\tests` |
 | `{localFileName}` | 本地文件名 | `test_example.py` |
-| `{remoteDir}` | 远程工程目录 | `/tmp/autotest` |
+| `{remoteDir}` | 远程工程目录 | `/tmp/RemoteTest` |
 
 **多命令配置示例**：
 
@@ -359,7 +359,7 @@ interface ProjectLogsConfig {
 
 **实现逻辑**：
 ```
-1. 获取配置文件路径设置（默认 autotest-config.json）
+1. 获取配置文件路径设置（默认 RemoteTest-config.json）
 2. 按优先级查找配置文件
 3. 如果文件存在：
    - 读取文件内容

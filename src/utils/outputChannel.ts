@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 export enum OutputChannelType {
-    AUTO_TEST = 'AutoTest',
+    AUTO_TEST = 'RemoteTest',
     TEST_OUTPUT = 'TestOutput'
 }
 
@@ -21,7 +21,7 @@ export class OutputChannelManager {
 
     getAutoTestChannel(): vscode.LogOutputChannel {
         if (!this.logChannel) {
-            this.logChannel = vscode.window.createOutputChannel('AutoTest', { log: true });
+            this.logChannel = vscode.window.createOutputChannel('RemoteTest', { log: true });
         }
         return this.logChannel;
     }

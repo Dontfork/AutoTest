@@ -228,7 +228,7 @@ export class ChangesTreeView {
         
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: `AutoTest - 上传 ${group.projectName} 变更文件`,
+            title: `RemoteTest - 上传 ${group.projectName} 变更文件`,
             cancellable: false
         }, async (progress) => {
             let completed = 0;

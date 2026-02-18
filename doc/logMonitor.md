@@ -558,7 +558,7 @@ class LogTreeItem extends vscode.TreeItem {
             this.contextValue = 'logFile';
             this.iconPath = new vscode.ThemeIcon('file-text');
             this.command = {
-                command: 'autotest.downloadLog',
+                command: 'RemoteTest.downloadLog',
                 title: '下载日志',
                 arguments: [this]
             };
@@ -589,7 +589,7 @@ class LogTreeItem extends vscode.TreeItem {
 ### 6.1 刷新日志列表
 
 ```typescript
-vscode.commands.registerCommand('autotest.refreshLogs', () => {
+vscode.commands.registerCommand('RemoteTest.refreshLogs', () => {
     logTreeDataProvider.refresh();
 });
 ```
@@ -597,7 +597,7 @@ vscode.commands.registerCommand('autotest.refreshLogs', () => {
 ### 6.2 下载日志
 
 ```typescript
-vscode.commands.registerCommand('autotest.downloadLog', async (item: LogTreeItem) => {
+vscode.commands.registerCommand('RemoteTest.downloadLog', async (item: LogTreeItem) => {
     if (item && item.logFile && !item.logFile.isDirectory) {
         await logMonitor.downloadLogWithProgress(item.logFile, item.projectConfig);
     }
@@ -607,7 +607,7 @@ vscode.commands.registerCommand('autotest.downloadLog', async (item: LogTreeItem
 ### 6.3 打开日志
 
 ```typescript
-vscode.commands.registerCommand('autotest.openLog', async (item: LogTreeItem) => {
+vscode.commands.registerCommand('RemoteTest.openLog', async (item: LogTreeItem) => {
     if (item && item.logFile && !item.logFile.isDirectory) {
         const localPath = await logMonitor.downloadLog(item.logFile, item.projectConfig);
         const document = await vscode.workspace.openTextDocument(localPath);

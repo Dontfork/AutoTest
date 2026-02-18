@@ -181,7 +181,7 @@ function ensureProjectLogs(project: any): void {
 }
 
 export function loadConfig(workspacePath: string): AutoTestConfig {
-    const configPath = vscode.workspace.getConfiguration('autotest').get<string>('configPath') || 'autotest-config.json';
+    const configPath = vscode.workspace.getConfiguration('RemoteTest').get<string>('configPath') || 'RemoteTest-config.json';
     
     const pathsToTry = [
         path.join(workspacePath, '.vscode', configPath),
@@ -407,7 +407,7 @@ export function setupConfigWatcher(context: vscode.ExtensionContext): void {
         return;
     }
 
-    const configPath = vscode.workspace.getConfiguration('autotest').get<string>('configPath') || 'autotest-config.json';
+    const configPath = vscode.workspace.getConfiguration('RemoteTest').get<string>('configPath') || 'RemoteTest-config.json';
 
     fileWatcher = vscode.workspace.createFileSystemWatcher(
         new vscode.RelativePattern(workspacePath, `**/${configPath}`),
@@ -421,7 +421,7 @@ export function setupConfigWatcher(context: vscode.ExtensionContext): void {
             return;
         }
         reloadConfig(workspacePath);
-        vscode.window.showInformationMessage('AutoTest 配置已自动刷新');
+        vscode.window.showInformationMessage('RemoteTest 配置已自动刷新');
     });
 
     fileWatcher.onDidCreate((uri) => {
@@ -429,13 +429,13 @@ export function setupConfigWatcher(context: vscode.ExtensionContext): void {
             return;
         }
         reloadConfig(workspacePath);
-        vscode.window.showInformationMessage('AutoTest 配置文件已创建并加载');
+        vscode.window.showInformationMessage('RemoteTest 配置文件已创建并加载');
     });
 
     fileWatcher.onDidDelete((uri) => {
         config = defaultConfig;
         configChangeEmitter.fire(defaultConfig);
-        vscode.window.showWarningMessage('AutoTest 配置文件已删除，使用默认配置');
+        vscode.window.showWarningMessage('RemoteTest 配置文件已删除，使用默认配置');
     });
 
     context.subscriptions.push(fileWatcher);

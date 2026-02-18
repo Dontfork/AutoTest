@@ -173,13 +173,13 @@ interface CommandVariables {
 
 | 变量 | 说明 | 示例值 |
 |------|------|--------|
-| `{filePath}` | 远程文件完整路径 | `/tmp/autotest/tests/test_example.py` |
+| `{filePath}` | 远程文件完整路径 | `/tmp/RemoteTest/tests/test_example.py` |
 | `{fileName}` | 远程文件名 | `test_example.py` |
-| `{fileDir}` | 远程文件所在目录 | `/tmp/autotest/tests` |
+| `{fileDir}` | 远程文件所在目录 | `/tmp/RemoteTest/tests` |
 | `{localPath}` | 本地文件完整路径 | `D:\project\tests\test_example.py` |
 | `{localDir}` | 本地文件所在目录 | `D:\project\tests` |
 | `{localFileName}` | 本地文件名 | `test_example.py` |
-| `{remoteDir}` | 远程工程目录 | `/tmp/autotest` |
+| `{remoteDir}` | 远程工程目录 | `/tmp/RemoteTest` |
 
 ### 3.4 过滤模式说明
 
@@ -576,7 +576,7 @@ const result = await executeRemoteCommand(
 
 ```
 [变量替换] 原始命令: pytest {filePath} -v
-[变量替换] 替换后: pytest /tmp/autotest/tests/test_example.py -v
+[变量替换] 替换后: pytest /tmp/RemoteTest/tests/test_example.py -v
 [SSH连接] root@192.168.1.100:22
 ──────────────────────────────────────────────────
 ============================= test session starts ==============================
@@ -597,12 +597,12 @@ test_example.py::test_multiply FAILED     (红色)
 
 | 通道名称 | 用途 |
 |----------|------|
-| AutoTest | 插件自身的日志输出 |
+| RemoteTest | 插件自身的日志输出 |
 | TestOutput | 测试用例执行输出 |
 
 ```typescript
 // 获取输出通道
-const autoTestChannel = vscode.window.createOutputChannel('AutoTest');
+const autoTestChannel = vscode.window.createOutputChannel('RemoteTest');
 const testOutputChannel = vscode.window.createOutputChannel('TestOutput');
 
 // 执行命令时使用 TestOutput 通道

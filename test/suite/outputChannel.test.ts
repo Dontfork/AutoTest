@@ -20,15 +20,15 @@ describe('OutputChannelManager Module - 输出通道管理模块测试', () => {
 
     describe('输出通道类型 - 只允许两个通道', () => {
         it('验证只有两个通道类型', () => {
-            const channelTypes = ['AutoTest', 'TestOutput'];
+            const channelTypes = ['RemoteTest', 'TestOutput'];
             
             assert.strictEqual(channelTypes.length, 2);
         });
 
         it('验证AutoTest通道名称', () => {
-            const autoTestChannel = 'AutoTest';
+            const autoTestChannel = 'RemoteTest';
             
-            assert.strictEqual(autoTestChannel, 'AutoTest');
+            assert.strictEqual(autoTestChannel, 'RemoteTest');
         });
 
         it('验证TestOutput通道名称', () => {
@@ -39,11 +39,11 @@ describe('OutputChannelManager Module - 输出通道管理模块测试', () => {
 
         it('验证通道类型枚举值', () => {
             const OutputChannelType = {
-                AUTO_TEST: 'AutoTest',
+                AUTO_TEST: 'RemoteTest',
                 TEST_OUTPUT: 'TestOutput'
             };
             
-            assert.strictEqual(OutputChannelType.AUTO_TEST, 'AutoTest');
+            assert.strictEqual(OutputChannelType.AUTO_TEST, 'RemoteTest');
             assert.strictEqual(OutputChannelType.TEST_OUTPUT, 'TestOutput');
         });
     });
@@ -87,18 +87,18 @@ describe('OutputChannelManager Module - 输出通道管理模块测试', () => {
         });
 
         it('验证appendLine方法签名', () => {
-            const appendLine = (message: string, type: string = 'AutoTest') => {
+            const appendLine = (message: string, type: string = 'RemoteTest') => {
                 return { message, type };
             };
             
             const result = appendLine('test message');
             
             assert.strictEqual(result.message, 'test message');
-            assert.strictEqual(result.type, 'AutoTest');
+            assert.strictEqual(result.type, 'RemoteTest');
         });
 
         it('验证appendLine可以指定通道类型', () => {
-            const appendLine = (message: string, type: string = 'AutoTest') => {
+            const appendLine = (message: string, type: string = 'RemoteTest') => {
                 return { message, type };
             };
             
@@ -110,11 +110,11 @@ describe('OutputChannelManager Module - 输出通道管理模块测试', () => {
 
     describe('禁止违规创建通道', () => {
         it('验证禁止创建其他名称的通道', () => {
-            const allowedChannels = ['AutoTest', 'TestOutput'];
+            const allowedChannels = ['RemoteTest', 'TestOutput'];
             const forbiddenChannels = [
-                'AutoTest Git检测',
-                'AutoTest 配置验证',
-                'AutoTest Debug',
+                'RemoteTest Git检测',
+                'RemoteTest 配置验证',
+                'RemoteTest Debug',
                 'TestOutput2'
             ];
             
@@ -124,11 +124,11 @@ describe('OutputChannelManager Module - 输出通道管理模块测试', () => {
         });
 
         it('验证通道名称必须精确匹配', () => {
-            const allowedChannels = ['AutoTest', 'TestOutput'];
+            const allowedChannels = ['RemoteTest', 'TestOutput'];
             
-            assert.ok(!allowedChannels.includes('autotest'));
-            assert.ok(!allowedChannels.includes('AutoTest '));
-            assert.ok(!allowedChannels.includes(' AutoTest'));
+            assert.ok(!allowedChannels.includes('RemoteTest'));
+            assert.ok(!allowedChannels.includes('RemoteTest '));
+            assert.ok(!allowedChannels.includes(' RemoteTest'));
             assert.ok(!allowedChannels.includes('testoutput'));
         });
     });
@@ -144,8 +144,8 @@ describe('OutputChannelManager Module - 输出通道管理模块测试', () => {
                 return channels.get(name);
             };
             
-            const channel1 = getChannel('AutoTest');
-            const channel2 = getChannel('AutoTest');
+            const channel1 = getChannel('RemoteTest');
+            const channel2 = getChannel('RemoteTest');
             
             assert.strictEqual(channel1, channel2);
             assert.strictEqual(channels.size, 1);
@@ -161,7 +161,7 @@ describe('OutputChannelManager Module - 输出通道管理模块测试', () => {
                 return channels.get(name);
             };
             
-            getChannel('AutoTest');
+            getChannel('RemoteTest');
             getChannel('TestOutput');
             
             assert.strictEqual(channels.size, 2);

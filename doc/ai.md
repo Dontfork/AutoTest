@@ -238,7 +238,7 @@ export class AIProviderImpl implements AIProvider {
 export class SessionManager {
     private sessions: Map<string, ChatSession> = new Map();
     private currentSessionId: string | null = null;
-    private storageKey: string = 'autotest.ai.sessions';
+    private storageKey: string = 'RemoteTest.ai.sessions';
 
     getCurrentSession(): ChatSession | null;
     setCurrentSession(sessionId: string): ChatSession | null;

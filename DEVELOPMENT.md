@@ -1,8 +1,8 @@
-# AutoTest 开发流程文档
+# RemoteTest 开发流程文档
 
 ## 概述
 
-本文档定义了 AutoTest 项目的标准开发流程。**所有功能开发必须严格遵循此流程**，确保代码质量和可维护性。
+本文档定义了 RemoteTest 项目的标准开发流程。**所有功能开发必须严格遵循此流程**，确保代码质量和可维护性。
 
 ## 核心原则
 
@@ -176,7 +176,7 @@ npm run test:unit
 - [ ] `doc/config.md` - 更新配置文档
 - [ ] `doc/Design.md` - 更新配置结构
 - [ ] `doc/FUNCTIONS.md` - 更新配置说明
-- [ ] `autotest-config.json` - 更新示例配置
+- [ ] `RemoteTest-config.json` - 更新示例配置
 - [ ] `test/suite/types.test.ts` - 添加类型测试
 - [ ] `test/suite/config.test.ts` - 添加配置测试
 
@@ -352,7 +352,7 @@ vsce package
 ### 打包输出
 
 - 输出目录: `dist/extension.js`
-- 安装包: `autotest-{version}.vsix`
+- 安装包: `RemoteTest-{version}.vsix`
 
 ### 安装测试
 
@@ -363,7 +363,7 @@ vsce package
 ## 附录：文档结构
 
 ```
-d:\code\AutoTest
+d:\code\RemoteTest
 ├── .vscode/                # VSCode 配置
 │   ├── launch.json         # 调试配置
 │   └── tasks.json          # 任务配置
@@ -392,7 +392,7 @@ d:\code\AutoTest
 ├── DEVELOPMENT.md          # 本文档
 ├── LICENSE
 ├── README.md               # 项目说明
-├── autotest-config.json    # 默认配置示例
+├── RemoteTest-config.json    # 默认配置示例
 ├── package.json            # 扩展配置
 ├── tsconfig.json           # TypeScript 配置
 └── webpack.config.js       # webpack 配置

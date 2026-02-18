@@ -1,12 +1,12 @@
-# AutoTest 插件功能文档
+# RemoteTest 插件功能文档
 
 ## 1. 功能概览
 
-AutoTest 插件提供以下核心功能：
+RemoteTest 插件提供以下核心功能：
 
 | 功能 | 描述 | 入口 |
 |------|------|------|
-| AI 对话 | 与 AI 助手进行对话交流，支持流式输出和会话管理 | 活动栏 AutoTest AI 图标 |
+| AI 对话 | 与 AI 助手进行对话交流，支持流式输出和会话管理 | 活动栏 RemoteTest AI 图标 |
 | 修改监控 | 基于 Git 检测项目变更，一键上传所有修改文件 | 资源管理器 - 修改监控 |
 | 日志监控 | 查看和下载服务器日志 | 资源管理器 - 日志监控 |
 | 运行 | 上传文件并执行测试命令 | 右键菜单 |
@@ -17,7 +17,7 @@ AutoTest 插件提供以下核心功能：
 
 ### 2.1 功能说明
 
-AutoTest 支持多工程多环境配置，每个工程可以配置：
+RemoteTest 支持多工程多环境配置，每个工程可以配置：
 - 独立的服务器信息（IP、端口、用户名、认证方式）
 - 独立的远程工作目录
 - 独立的命令配置（支持多个命令）
@@ -54,7 +54,7 @@ AI 对话功能允许用户与 AI 助手进行自然语言交互，支持：
 
 ### 3.2 使用方法
 
-1. 点击 VSCode 左侧活动栏的 AutoTest AI 图标
+1. 点击 VSCode 左侧活动栏的 RemoteTest AI 图标
 2. 在输入框中输入消息
 3. 按 Enter 或点击发送按钮
 4. AI 响应会实时流式显示
@@ -69,7 +69,7 @@ AI 对话功能允许用户与 AI 助手进行自然语言交互，支持：
 
 ### 3.4 配置要求
 
-在 `.vscode/autotest-config.json` 中配置 AI 服务：
+在 `.vscode/RemoteTest-config.json` 中配置 AI 服务：
 
 ```json
 {
@@ -406,7 +406,7 @@ AI 响应支持以下 Markdown 语法：
 
 ### 7.1 功能概览
 
-AutoTest 提供三种文件操作方式：
+RemoteTest 提供三种文件操作方式：
 
 | 功能 | 描述 | 入口 |
 |------|------|------|
@@ -423,7 +423,7 @@ AutoTest 提供三种文件操作方式：
 #### 6.2.2 使用方法
 
 1. 在资源管理器中右键点击文件或目录
-2. 选择 **AutoTest: 运行**
+2. 选择 **RemoteTest: 运行**
 3. 如果工程配置了多个命令，选择要执行的命令
 4. 等待上传和命令执行完成
 5. 输出显示在 "TestOutput" OutputChannel
@@ -442,7 +442,7 @@ AutoTest 提供三种文件操作方式：
 #### 6.3.2 使用方法
 
 1. 在资源管理器中右键点击文件或目录
-2. 选择 **AutoTest: 上传文件**
+2. 选择 **RemoteTest: 上传文件**
 3. 等待上传完成
 
 ### 6.4 同步文件
@@ -454,7 +454,7 @@ AutoTest 提供三种文件操作方式：
 #### 6.4.2 使用方法
 
 1. 在资源管理器中右键点击文件或目录
-2. 选择 **AutoTest: 同步文件**
+2. 选择 **RemoteTest: 同步文件**
 3. 等待下载完成
 
 #### 6.4.3 文件操作
@@ -466,7 +466,7 @@ AutoTest 提供三种文件操作方式：
 
 同步功能使用与上传相同的路径映射逻辑：
 - 本地路径 `D:\project\tests\test.py` 
-- 映射到远程路径 `/tmp/autotest/tests/test.py`
+- 映射到远程路径 `/tmp/RemoteTest/tests/test.py`
 - 同步时从远程路径下载到本地路径
 
 ### 6.5 多工程配置示例
@@ -544,7 +544,7 @@ AutoTest 提供三种文件操作方式：
   "logs": {
     "directories": [
       { "name": "应用日志", "path": "/var/log/myapp" },
-      { "name": "测试日志", "path": "/var/log/autotest" }
+      { "name": "测试日志", "path": "/var/log/RemoteTest" }
     ],
     "downloadPath": "D:\\downloads",
     "refreshInterval": 5000
@@ -558,13 +558,13 @@ AutoTest 提供三种文件操作方式：
 
 | 变量 | 说明 | 示例值 |
 |------|------|--------|
-| `{filePath}` | 远程文件完整路径 | `/tmp/autotest/tests/test_example.py` |
+| `{filePath}` | 远程文件完整路径 | `/tmp/RemoteTest/tests/test_example.py` |
 | `{fileName}` | 远程文件名 | `test_example.py` |
-| `{fileDir}` | 远程文件所在目录 | `/tmp/autotest/tests` |
+| `{fileDir}` | 远程文件所在目录 | `/tmp/RemoteTest/tests` |
 | `{localPath}` | 本地文件完整路径 | `D:\project\tests\test_example.py` |
 | `{localDir}` | 本地文件所在目录 | `D:\project\tests` |
 | `{localFileName}` | 本地文件名 | `test_example.py` |
-| `{remoteDir}` | 远程工程目录 | `/tmp/autotest` |
+| `{remoteDir}` | 远程工程目录 | `/tmp/RemoteTest` |
 
 ### 6.7 输出过滤与颜色渲染
 
@@ -666,7 +666,7 @@ AutoTest 提供三种文件操作方式：
 
 | 通道名称 | 用途 |
 |----------|------|
-| AutoTest | 插件自身日志、调试信息 |
+| RemoteTest | 插件自身日志、调试信息 |
 | TestOutput | 用例执行时的命令输出 |
 
 ## 7. 配置文件说明
@@ -674,13 +674,13 @@ AutoTest 提供三种文件操作方式：
 ### 7.1 配置文件位置
 
 ```
-{workspace}/.vscode/autotest-config.json
+{workspace}/.vscode/RemoteTest-config.json
 ```
 
 或
 
 ```
-{workspace}/autotest-config.json
+{workspace}/RemoteTest-config.json
 ```
 
 ### 7.2 配置动态刷新
@@ -693,11 +693,11 @@ AutoTest 提供三种文件操作方式：
 
 **手动刷新**：
 - 在日志监控视图工具栏点击刷新配置按钮 (🔄)
-- 或使用命令面板执行 `AutoTest: 刷新配置`
+- 或使用命令面板执行 `RemoteTest: 刷新配置`
 
 **打开配置文件**：
 - 在日志监控视图工具栏点击打开配置按钮 (⚙️)
-- 或使用命令面板执行 `AutoTest: 打开配置文件`
+- 或使用命令面板执行 `RemoteTest: 打开配置文件`
 
 ### 7.3 完整配置示例
 
@@ -714,7 +714,7 @@ AutoTest 提供三种文件操作方式：
         "username": "root",
         "password": "",
         "privateKeyPath": "",
-        "remoteDirectory": "/tmp/autotest"
+        "remoteDirectory": "/tmp/RemoteTest"
       },
       "commands": [
         {
@@ -727,7 +727,7 @@ AutoTest 提供三种文件操作方式：
       "logs": {
         "directories": [
           { "name": "应用日志", "path": "/var/log/myapp" },
-          { "name": "测试日志", "path": "/var/log/autotest" }
+          { "name": "测试日志", "path": "/var/log/RemoteTest" }
         ],
         "downloadPath": "D:\\downloads",
         "refreshInterval": 5000
@@ -834,7 +834,7 @@ AutoTest 提供三种文件操作方式：
 - 检查 API Key 是否配置
 - 检查模型名称是否正确
 - 检查网络连接
-- 查看 AutoTest 输出通道中的错误信息
+- 查看 RemoteTest 输出通道中的错误信息
 
 ### 9.2 日志列表为空
 

@@ -95,7 +95,7 @@ export class FileUploader {
         try {
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `AutoTest - ${project.name}`,
+                title: `RemoteTest - ${project.name}`,
                 cancellable: false
             }, async (progress) => {
                 if (isDirectory) {
@@ -166,7 +166,7 @@ export class FileUploader {
         try {
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `AutoTest - ${project.name} - ${command.name}`,
+                title: `RemoteTest - ${project.name} - ${command.name}`,
                 cancellable: false
             }, async (progress) => {
                 if (isDirectory) {
@@ -274,7 +274,7 @@ export class FileUploader {
         try {
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `AutoTest - ${project.name}`,
+                title: `RemoteTest - ${project.name}`,
                 cancellable: false
             }, async (progress) => {
                 if (isDirectory) {
@@ -361,7 +361,7 @@ export class FileUploader {
         try {
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `AutoTest - ${project.name} - 同步文件`,
+                title: `RemoteTest - ${project.name} - 同步文件`,
                 cancellable: false
             }, async (progress) => {
                 const remotePath = this.calculateRemotePath(localPath, project);

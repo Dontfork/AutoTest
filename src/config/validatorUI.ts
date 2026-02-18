@@ -5,7 +5,7 @@ import { getOutputChannelManager } from '../utils/outputChannel';
 
 export function showValidationMessages(result: ConfigValidationResult): void {
     if (result.errors.length > 0) {
-        const errorMessage = `AutoTest 配置验证失败：\n${result.errors.join('\n')}`;
+        const errorMessage = `RemoteTest 配置验证失败：\n${result.errors.join('\n')}`;
         vscode.window.showErrorMessage(errorMessage, '查看详情').then(selection => {
             if (selection === '查看详情') {
                 const outputChannel = getOutputChannelManager().getAutoTestChannel();
@@ -39,5 +39,5 @@ export function saveConfigWithDefaults(configPath: string, config: any, filledCo
     }
     
     fs.writeFileSync(configPath, content, 'utf-8');
-    vscode.window.showInformationMessage('AutoTest 配置文件已更新，补充了缺失的必填字段');
+    vscode.window.showInformationMessage('RemoteTest 配置文件已更新，补充了缺失的必填字段');
 }

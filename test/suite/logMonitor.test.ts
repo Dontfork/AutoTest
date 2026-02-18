@@ -88,8 +88,8 @@ describe('LogMonitor Module - 日志监控模块测试', () => {
 
         it('验证远程日志文件路径 - 来自SSH服务器的日志', () => {
             const logFile: LogFile = {
-                name: 'autotest-2024-01-15.log',
-                path: '/var/log/autotest/autotest-2024-01-15.log',
+                name: 'RemoteTest-2024-01-15.log',
+                path: '/var/log/RemoteTest/RemoteTest-2024-01-15.log',
                 size: 2048576,
                 modifiedTime: new Date('2024-01-15T14:30:00Z')
             };
@@ -121,12 +121,12 @@ describe('LogMonitor Module - 日志监控模块测试', () => {
 
         it('远程日志目录配置 - 通过SCP访问', () => {
             const config = {
-                monitorDirectory: '/var/log/autotest',
+                monitorDirectory: '/var/log/RemoteTest',
                 downloadPath: './logs',
                 refreshInterval: 3000
             };
             
-            assert.strictEqual(config.monitorDirectory, '/var/log/autotest');
+            assert.strictEqual(config.monitorDirectory, '/var/log/RemoteTest');
             assert.ok(config.monitorDirectory.startsWith('/'));
         });
     });
@@ -199,11 +199,11 @@ describe('LogMonitor Module - 日志监控模块测试', () => {
         });
 
         it('远程日志路径构建 - 正确拼接远程目录和文件名', () => {
-            const remoteDir = '/var/log/autotest';
+            const remoteDir = '/var/log/RemoteTest';
             const fileName = 'test.log';
             const remotePath = `${remoteDir}/${fileName}`;
             
-            assert.strictEqual(remotePath, '/var/log/autotest/test.log');
+            assert.strictEqual(remotePath, '/var/log/RemoteTest/test.log');
         });
 
         it('本地目录自动创建 - 不存在时递归创建', () => {

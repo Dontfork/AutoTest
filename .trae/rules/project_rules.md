@@ -1,5 +1,5 @@
 ## 项目路径
-d:\code\AutoTest
+d:\code\RemoteTest
 
 ## 开发环境
 Windows 11

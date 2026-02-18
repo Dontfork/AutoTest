@@ -1,7 +1,7 @@
 {
-  "name": "autotest-tests",
+  "name": "RemoteTest-tests",
   "version": "0.0.1",
-  "description": "AutoTest extension tests",
+  "description": "RemoteTest extension tests",
   "scripts": {
     "test": "node ./out/test/runTest.js"
   },

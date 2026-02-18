@@ -1,4 +1,4 @@
-# AutoTest
+# RemoteTest
 
 一款 VSCode 插件，旨在简化测试工作流程，提供文件上传、命令执行、日志监控和 AI 对话功能。支持多工程多环境配置，自动路径匹配，灵活的命令执行和日志管理。
 
@@ -58,12 +58,12 @@ vsce package
 
 ## 配置
 
-在项目根目录创建 `.vscode/autotest-config.json` 文件：
+在项目根目录创建 `.vscode/RemoteTest-config.json` 文件：
 
 > **⚠️ 路径配置说明**：所有路径必须使用绝对路径
 > - `localPath`: 本地工程绝对路径，如 `D:\projectA`（可选）
 > - `privateKeyPath`: 本地私钥绝对路径，如 `C:\Users\user\.ssh\id_rsa`
-> - `remoteDirectory`: 远程服务器绝对路径，如 `/tmp/autotest`（可选）
+> - `remoteDirectory`: 远程服务器绝对路径，如 `/tmp/RemoteTest`（可选）
 > - `logs.directories[].path`: 远程服务器绝对路径，如 `/var/log/myapp`
 > - `logs.downloadPath`: 本地绝对路径，如 `D:\downloads`
 
@@ -350,20 +350,20 @@ AI 配置采用模型列表方式，支持配置多个 AI 模型：
 
 | 命令 ID | 描述 | 触发方式 |
 |---------|------|----------|
-| `autotest.runTestCase` | 运行用例（上传并执行） | 右键菜单（文件/目录） |
-| `autotest.uploadFile` | 上传文件（仅上传，不执行） | 右键菜单（文件/目录） |
-| `autotest.syncFile` | 同步文件（从远程下载到本地） | 右键菜单（文件/目录） |
-| `autotest.refreshQuickCommands` | 刷新快捷命令列表 | 工具栏按钮 |
-| `autotest.executeQuickCommand` | 执行快捷命令 | 命令节点按钮 |
-| `autotest.refreshChanges` | 刷新变更列表 | 工具栏按钮 |
-| `autotest.uploadProjectChanges` | 上传项目的所有变更文件 | 项目节点按钮 |
-| `autotest.uploadSelectedChange` | 上传选中的变更文件 | 右键菜单 |
-| `autotest.openChangeFile` | 打开变更文件 | 右键菜单 |
-| `autotest.refreshLogs` | 刷新日志列表 | 工具栏按钮 |
-| `autotest.downloadLog` | 下载日志文件 | 点击日志项 |
-| `autotest.openLog` | 打开日志文件 | 右键菜单 |
-| `autotest.reloadConfig` | 手动刷新配置 | 工具栏按钮 / 命令面板 |
-| `autotest.openConfig` | 打开配置文件 | 工具栏按钮 / 命令面板 |
+| `RemoteTest.runTestCase` | 运行用例（上传并执行） | 右键菜单（文件/目录） |
+| `RemoteTest.uploadFile` | 上传文件（仅上传，不执行） | 右键菜单（文件/目录） |
+| `RemoteTest.syncFile` | 同步文件（从远程下载到本地） | 右键菜单（文件/目录） |
+| `RemoteTest.refreshQuickCommands` | 刷新快捷命令列表 | 工具栏按钮 |
+| `RemoteTest.executeQuickCommand` | 执行快捷命令 | 命令节点按钮 |
+| `RemoteTest.refreshChanges` | 刷新变更列表 | 工具栏按钮 |
+| `RemoteTest.uploadProjectChanges` | 上传项目的所有变更文件 | 项目节点按钮 |
+| `RemoteTest.uploadSelectedChange` | 上传选中的变更文件 | 右键菜单 |
+| `RemoteTest.openChangeFile` | 打开变更文件 | 右键菜单 |
+| `RemoteTest.refreshLogs` | 刷新日志列表 | 工具栏按钮 |
+| `RemoteTest.downloadLog` | 下载日志文件 | 点击日志项 |
+| `RemoteTest.openLog` | 打开日志文件 | 右键菜单 |
+| `RemoteTest.reloadConfig` | 手动刷新配置 | 工具栏按钮 / 命令面板 |
+| `RemoteTest.openConfig` | 打开配置文件 | 工具栏按钮 / 命令面板 |
 
 ## 文档
 
@@ -378,7 +378,7 @@ AI 配置采用模型列表方式，支持配置多个 AI 模型：
 ## 目录结构
 
 ```
-d:\code\AutoTest
+d:\code\RemoteTest
 ├── .vscode/                # VSCode 配置
 │   ├── launch.json         # 调试配置
 │   └── tasks.json          # 任务配置
@@ -448,7 +448,7 @@ d:\code\AutoTest
 ├── DEVELOPMENT.md          # 开发流程文档
 ├── LICENSE
 ├── README.md               # 本文档
-├── autotest-config.json    # 默认配置文件
+├── RemoteTest-config.json    # 默认配置文件
 ├── package.json            # 扩展配置
 ├── tsconfig.json           # TypeScript 配置
 └── webpack.config.js       # webpack 配置

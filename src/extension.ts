@@ -48,7 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     const commands = [
-        vscode.commands.registerCommand('autotest.runTestCase', async (uri: vscode.Uri) => {
+        vscode.commands.registerCommand('RemoteTest.runTestCase', async (uri: vscode.Uri) => {
             try {
                 if (!uri) {
                     const activeEditor = vscode.window.activeTextEditor;
@@ -65,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }),
 
-        vscode.commands.registerCommand('autotest.uploadFile', async (uri: vscode.Uri) => {
+        vscode.commands.registerCommand('RemoteTest.uploadFile', async (uri: vscode.Uri) => {
             try {
                 if (!uri) {
                     const activeEditor = vscode.window.activeTextEditor;
@@ -82,7 +82,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }),
 
-        vscode.commands.registerCommand('autotest.syncFile', async (uri: vscode.Uri) => {
+        vscode.commands.registerCommand('RemoteTest.syncFile', async (uri: vscode.Uri) => {
             try {
                 if (!uri) {
                     const activeEditor = vscode.window.activeTextEditor;
@@ -99,32 +99,32 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }),
 
-        vscode.commands.registerCommand('autotest.refreshLogs', async () => {
+        vscode.commands.registerCommand('RemoteTest.refreshLogs', async () => {
             logTreeView.refresh();
         }),
 
-        vscode.commands.registerCommand('autotest.downloadLog', async (item: LogTreeItem) => {
+        vscode.commands.registerCommand('RemoteTest.downloadLog', async (item: LogTreeItem) => {
             await logTreeView.downloadLog(item);
         }),
 
-        vscode.commands.registerCommand('autotest.openLog', async (item: LogTreeItem) => {
+        vscode.commands.registerCommand('RemoteTest.openLog', async (item: LogTreeItem) => {
             await logTreeView.openLogInEditor(item);
         }),
 
-        vscode.commands.registerCommand('autotest.reloadConfig', () => {
+        vscode.commands.registerCommand('RemoteTest.reloadConfig', () => {
             const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             if (wsPath) {
                 reloadConfig(wsPath);
-                vscode.window.showInformationMessage('AutoTest 配置已刷新');
+                vscode.window.showInformationMessage('RemoteTest 配置已刷新');
             } else {
                 vscode.window.showWarningMessage('无法刷新配置：未找到工作区');
             }
         }),
 
-        vscode.commands.registerCommand('autotest.openConfig', async () => {
+        vscode.commands.registerCommand('RemoteTest.openConfig', async () => {
             const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             if (wsPath) {
-                const configPath = vscode.workspace.getConfiguration('autotest').get<string>('configPath') || 'autotest-config.json';
+                const configPath = vscode.workspace.getConfiguration('RemoteTest').get<string>('configPath') || 'RemoteTest-config.json';
                 const pathsToTry = [
                     vscode.Uri.file(`${wsPath}/.vscode/${configPath}`),
                     vscode.Uri.file(`${wsPath}/${configPath}`)
@@ -147,27 +147,27 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }),
 
-        vscode.commands.registerCommand('autotest.refreshChanges', async () => {
+        vscode.commands.registerCommand('RemoteTest.refreshChanges', async () => {
             changesTreeView.refresh();
         }),
 
-        vscode.commands.registerCommand('autotest.uploadProjectChanges', async (item: ChangeTreeItem) => {
+        vscode.commands.registerCommand('RemoteTest.uploadProjectChanges', async (item: ChangeTreeItem) => {
             await changesTreeView.uploadProjectChanges(item);
         }),
 
-        vscode.commands.registerCommand('autotest.uploadSelectedChange', async (item: ChangeTreeItem) => {
+        vscode.commands.registerCommand('RemoteTest.uploadSelectedChange', async (item: ChangeTreeItem) => {
             await changesTreeView.uploadSelectedChange(item);
         }),
 
-        vscode.commands.registerCommand('autotest.openChangeFile', async (item: ChangeTreeItem) => {
+        vscode.commands.registerCommand('RemoteTest.openChangeFile', async (item: ChangeTreeItem) => {
             await changesTreeView.openChangeFile(item);
         }),
 
-        vscode.commands.registerCommand('autotest.refreshQuickCommands', async () => {
+        vscode.commands.registerCommand('RemoteTest.refreshQuickCommands', async () => {
             quickCommandsTreeView.refresh();
         }),
 
-        vscode.commands.registerCommand('autotest.executeQuickCommand', async (item: QuickCommandItem) => {
+        vscode.commands.registerCommand('RemoteTest.executeQuickCommand', async (item: QuickCommandItem) => {
             await quickCommandsTreeView.executeQuickCommand(item);
         })
     ];
@@ -181,7 +181,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     logTreeView.start();
 
-    vscode.window.showInformationMessage('AutoTest 插件已启动');
+    vscode.window.showInformationMessage('RemoteTest 插件已启动');
 }
 
 export function deactivate() {

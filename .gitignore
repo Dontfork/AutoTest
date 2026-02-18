@@ -8,8 +8,8 @@ src/**/*.d.ts
 src/**/*.js.map
 src/**/*.d.ts.map
 
-# AutoTest 工作区数据
-.autotest/
+# RemoteTest 工作区数据
+.RemoteTest/
 
 # 依赖
 node_modules/

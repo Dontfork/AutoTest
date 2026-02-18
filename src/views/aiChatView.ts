@@ -156,7 +156,7 @@ function enhanceMarkdown(html: string): string {
 }
 
 export class AIChatViewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'autotest-ai-view';
+    public static readonly viewType = 'RemoteTest-ai-view';
     private aiChat: AIChat;
     private sessionManager: SessionManager;
     private view: vscode.WebviewView | undefined;
@@ -1269,7 +1269,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     <div id="messages" class="messages">
         <div class="welcome">
             <svg class="welcome-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></svg>
-            <h2>AutoTest AI 助手</h2>
+            <h2>RemoteTest AI 助手</h2>
             <p>输入问题开始对话</p>
         </div>
     </div>
@@ -1382,7 +1382,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         function renderMessages(msgs) {
             messages.innerHTML = '';
             if (!msgs || msgs.length === 0) {
-                messages.innerHTML = '<div class="welcome"><svg class="welcome-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></svg><h2>AutoTest AI 助手</h2><p>输入问题开始对话</p></div>';
+                messages.innerHTML = '<div class="welcome"><svg class="welcome-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></svg><h2>RemoteTest AI 助手</h2><p>输入问题开始对话</p></div>';
                 return;
             }
             msgs.filter(m => m.role !== 'system').forEach(m => {

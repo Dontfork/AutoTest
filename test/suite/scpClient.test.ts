@@ -161,7 +161,7 @@ describe('SCPClient Module - SCP客户端模块测试', () => {
 
     describe('ensureRemoteDirectory 函数 - 远程目录创建', () => {
         it('验证递归创建目录逻辑 - mkdir的recursive参数', () => {
-            const remotePath = '/tmp/autotest/subdir/deep';
+            const remotePath = '/tmp/RemoteTest/subdir/deep';
             const pathParts = remotePath.split('/').filter(Boolean);
             
             assert.ok(pathParts.length > 1);
@@ -228,7 +228,7 @@ describe('SCPClient Module - SCP客户端模块测试', () => {
     describe('路径处理 - 跨平台兼容', () => {
         it('验证远程路径使用posix格式 - 正斜杠分隔', () => {
             const path = require('path');
-            const remoteDir = '/tmp/autotest';
+            const remoteDir = '/tmp/RemoteTest';
             const fileName = 'test.txt';
             
             const remotePath = path.posix.join(remoteDir, fileName);
