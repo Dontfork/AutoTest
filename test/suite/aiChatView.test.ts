@@ -228,14 +228,16 @@ describe('AIChatView Session Management - 会话管理测试', () => {
         assert.ok(source.includes('sendCurrentSession'));
     });
 
-    it('新建会话应检查当前会话是否为空', () => {
+    it('新建会话应检查是否存在空会话', () => {
         const source = getSourceFile();
-        assert.ok(source.includes('currentSession.messages.length'));
+        assert.ok(source.includes('emptySession'));
+        assert.ok(source.includes('allSessions.find'));
     });
 
-    it('新建会话逻辑应只在当前会话有内容时创建新会话', () => {
+    it('新建会话逻辑应在存在空会话时切换到空会话', () => {
         const source = getSourceFile();
-        assert.ok(source.includes("if (!currentSession || currentSession.messages.length > 0)"));
+        assert.ok(source.includes("if (emptySession)"));
+        assert.ok(source.includes('this.aiChat.setCurrentSession(emptySession.id)'));
         assert.ok(source.includes('this.aiChat.createNewSession()'));
     });
 });

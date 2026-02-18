@@ -139,18 +139,18 @@ function enhanceMarkdown(html: string): string {
         return `<pre><div class="code-header">${langDisplay}<button class="copy-btn" title="复制代码"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button></div><code>${highlightedCode}</code></pre>`;
     });
     
-    html = html.replace(/<h([1-6])>/g, '<h$1 style="margin: 16px 0 8px 0; color: #e0e0e0; font-weight: 600;">');
-    html = html.replace(/<ul>/g, '<ul style="margin: 8px 0; padding-left: 24px;">');
-    html = html.replace(/<ol>/g, '<ol style="margin: 8px 0; padding-left: 24px;">');
-    html = html.replace(/<li>/g, '<li style="margin: 4px 0; line-height: 1.6;">');
-    html = html.replace(/<blockquote>/g, '<blockquote style="border-left: 3px solid #0e639c; padding: 8px 16px; margin: 12px 0; background: #252526; border-radius: 0 4px 4px 0;">');
-    html = html.replace(/<table>/g, '<table style="width: 100%; border-collapse: collapse; margin: 12px 0;">');
-    html = html.replace(/<tr>/g, '<tr style="border-bottom: 1px solid #3c3c3c;">');
-    html = html.replace(/<th>/g, '<th style="padding: 8px 12px; text-align: left;">');
-    html = html.replace(/<td>/g, '<td style="padding: 8px 12px;">');
-    html = html.replace(/<p>/g, '<p style="margin: 8px 0; line-height: 1.7;">');
-    html = html.replace(/<code>(?![^<]*<\/code><\/pre>)/g, '<code style="background: #2d2d2d; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco, monospace; font-size: 0.9em;">');
-    html = html.replace(/<a /g, '<a style="color: #3794ff; text-decoration: none;" target="_blank" ');
+    html = html.replace(/<h([1-6])>/g, '<h$1>');
+    html = html.replace(/<ul>/g, '<ul>');
+    html = html.replace(/<ol>/g, '<ol>');
+    html = html.replace(/<li>/g, '<li>');
+    html = html.replace(/<blockquote>/g, '<blockquote>');
+    html = html.replace(/<table>/g, '<table>');
+    html = html.replace(/<tr>/g, '<tr>');
+    html = html.replace(/<th>/g, '<th>');
+    html = html.replace(/<td>/g, '<td>');
+    html = html.replace(/<p>/g, '<p>');
+    html = html.replace(/<code>(?![^<]*<\/code><\/pre>)/g, '<code>');
+    html = html.replace(/<a /g, '<a target="_blank" ');
     
     return html;
 }
@@ -198,8 +198,11 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                     this.sendCurrentSession();
                     break;
                 case 'newSession':
-                    const currentSession = this.aiChat.getCurrentSession();
-                    if (!currentSession || currentSession.messages.length > 0) {
+                    const allSessions = this.aiChat.getAllSessions();
+                    const emptySession = allSessions.find(s => s.messages.length === 0);
+                    if (emptySession) {
+                        this.aiChat.setCurrentSession(emptySession.id);
+                    } else {
                         this.aiChat.createNewSession();
                     }
                     this.sendSessions();
@@ -241,6 +244,10 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             this.sendSessions();
         });
         
+        // 初始化时发送数据
+        this.sendAvailableModels();
+        this.sendSessions();
+        this.sendCurrentSession();
         this.sendSystemPrompt();
     }
 
@@ -385,98 +392,121 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
     <style>
+        :root {
+            --vscode-bg: var(--vscode-editor-background);
+            --vscode-fg: var(--vscode-editor-foreground);
+            --vscode-button-bg: var(--vscode-button-background);
+            --vscode-button-fg: var(--vscode-button-foreground);
+            --vscode-button-hover: var(--vscode-button-hoverBackground);
+            --vscode-input-bg: var(--vscode-input-background);
+            --vscode-input-fg: var(--vscode-input-foreground);
+            --vscode-input-border: var(--vscode-input-border);
+            --vscode-dropdown-bg: var(--vscode-dropdown-background);
+            --vscode-dropdown-fg: var(--vscode-dropdown-foreground);
+            --vscode-dropdown-border: var(--vscode-dropdown-border);
+            --vscode-list-hover: var(--vscode-list-hoverBackground);
+            --vscode-list-active: var(--vscode-list-activeSelectionBackground);
+            --vscode-focus-border: var(--vscode-focusBorder);
+            --vscode-border: var(--vscode-panel-border);
+            --vscode-sidebar-bg: var(--vscode-sideBar-background);
+            --vscode-sidebar-fg: var(--vscode-sideBar-foreground);
+            --vscode-widget-bg: var(--vscode-editorWidget-background);
+            --vscode-widget-border: var(--vscode-editorWidget-border);
+            --vscode-scrollbar-bg: var(--vscode-scrollbarSlider-background);
+            --vscode-scrollbar-hover: var(--vscode-scrollbarSlider-hoverBackground);
+            --vscode-link: var(--vscode-textLink-foreground);
+            --vscode-error: var(--vscode-errorForeground);
+            --vscode-success: var(--vscode-terminal-ansiGreen);
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
-            background: linear-gradient(180deg, #1e1e1e 0%, #1a1a1a 100%); 
-            color: #d4d4d4; 
+            font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif); 
+            background: var(--vscode-bg); 
+            color: var(--vscode-fg); 
             height: 100vh; 
             display: flex; 
             flex-direction: column;
+            font-size: 12px;
         }
         
         .toolbar { 
-            padding: 10px 16px; 
-            background: linear-gradient(90deg, #2d2d30 0%, #252526 100%);
-            border-bottom: 1px solid rgba(60, 60, 60, 0.6); 
+            padding: 4px 8px; 
+            background: var(--vscode-bg);
+            border-bottom: 1px solid var(--vscode-border); 
             display: flex; 
-            gap: 8px; 
+            gap: 4px; 
             align-items: center; 
             position: relative; 
             justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
         
-        .toolbar-left { display: flex; align-items: center; gap: 8px; }
-        .toolbar-right { display: flex; align-items: center; gap: 6px; }
+        .toolbar-left { display: flex; align-items: center; gap: 4px; }
+        .toolbar-right { display: flex; align-items: center; gap: 4px; }
         
         .toolbar button { 
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            width: 38px; 
-            height: 38px; 
+            width: 28px; 
+            height: 28px; 
             background: transparent; 
-            color: #858585; 
+            color: var(--vscode-sidebar-fg); 
             border: 1px solid transparent;
             cursor: pointer; 
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
-            border-radius: 8px;
+            transition: all 0.15s ease; 
+            border-radius: 4px;
         }
         
         .toolbar button:hover { 
-            color: #cccccc; 
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.1);
-            transform: translateY(-1px);
-        }
-        
-        .toolbar button:active {
-            transform: translateY(0);
+            color: var(--vscode-fg); 
+            background: var(--vscode-list-hover);
+            border-color: var(--vscode-widget-border);
         }
         
         .toolbar button svg { 
-            width: 20px; 
-            height: 20px; 
+            width: 16px; 
+            height: 16px; 
             stroke: currentColor; 
             stroke-width: 2; 
             fill: none;
         }
         
         .model-select-btn { 
-            background: rgba(255, 255, 255, 0.04); 
-            color: #cccccc; 
-            border: 1px solid rgba(60, 60, 60, 0.7); 
-            border-radius: 10px;
-            padding: 10px 16px; 
-            font-size: 13px; 
+            background: var(--vscode-input-bg); 
+            color: var(--vscode-input-fg); 
+            border: 1px solid var(--vscode-input-border); 
+            border-radius: 4px;
+            padding: 4px 8px; 
+            font-size: 12px; 
             cursor: pointer; 
             min-width: 120px; 
+            width: auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+        
+        .model-select-btn span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
         }
         
         .model-select-btn:hover { 
-            color: #ffffff; 
-            border-color: rgba(80, 80, 80, 0.9);
-            background: rgba(255, 255, 255, 0.06);
-            transform: translateY(-1px);
-        }
-        
-        .model-select-btn:active {
-            transform: translateY(0);
+            border-color: var(--vscode-focus-border);
+            background: var(--vscode-input-bg);
         }
         
         .model-select-btn svg {
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             stroke: currentColor;
-            stroke-width: 1.8;
+            stroke-width: 2;
             fill: none;
-            transition: transform 0.2s ease;
+            transition: transform 0.15s ease;
         }
         
         .model-select-btn.open svg {
@@ -487,103 +517,103 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             display: none; 
             position: absolute; 
             top: 100%; 
-            left: 12px; 
+            left: 8px; 
             right: auto;
-            min-width: 200px;
-            background: linear-gradient(135deg, #252526 0%, #1e1e1e 100%); 
-            border: 1px solid rgba(60, 60, 60, 0.8); 
-            border-radius: 12px; 
-            max-height: 300px; 
+            min-width: 160px;
+            background: var(--vscode-widget-bg); 
+            border: 1px solid var(--vscode-widget-border); 
+            border-radius: 4px; 
+            max-height: 200px; 
             overflow-y: auto; 
             z-index: 100;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
-            animation: slideDownFade 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            margin-top: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-top: 4px;
         }
         
         .model-panel::-webkit-scrollbar {
-            width: 8px;
+            width: 10px;
         }
         
         .model-panel::-webkit-scrollbar-track {
             background: transparent;
-            margin: 8px;
         }
         
         .model-panel::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
-            border-radius: 4px;
-            border: 2px solid transparent;
-            background-clip: padding-box;
+            background: var(--vscode-scrollbar-bg);
+            border-radius: 0;
+        }
+        
+        .model-panel::-webkit-scrollbar-thumb:hover {
+            background: var(--vscode-scrollbar-hover);
         }
         
         .model-panel.show { display: block; }
         
         .model-item { 
-            padding: 14px 18px; 
+            padding: 6px 8px; 
             cursor: pointer; 
-            border-bottom: 1px solid rgba(60, 60, 60, 0.5); 
+            border-bottom: 1px solid var(--vscode-border); 
             display: flex; 
             justify-content: space-between; 
             align-items: center;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.15s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .model-item:last-child { border-bottom: none; }
         
         .model-item:hover { 
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateX(2px);
+            background: var(--vscode-list-hover);
         }
         
         .model-item.active { 
-            background: rgba(14, 99, 156, 0.25);
-            border-left: 4px solid #0e639c;
-            padding-left: 14px;
+            background: var(--vscode-list-active);
         }
         
         .model-item .name { 
-            color: #d4d4d4;
-            font-size: 14px;
-            font-weight: 500;
+            flex: 1;
+            color: var(--vscode-fg);
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         
         .model-item.active .name {
-            color: #ffffff;
-            font-weight: 600;
+            color: var(--vscode-button-fg);
         }
         
         .model-item .check {
-            color: #0e639c;
+            color: var(--vscode-button-fg);
             opacity: 0;
-            transform: scale(0.5);
-            transition: all 0.2s ease;
+            flex-shrink: 0;
         }
         
         .model-item.active .check {
             opacity: 1;
-            transform: scale(1);
         }
         
         .model-item .check svg {
-            width: 18px;
-            height: 18px;
+            width: 14px;
+            height: 14px;
             stroke: currentColor;
-            stroke-width: 2.5;
+            stroke-width: 2;
             fill: none;
         }
         
         .no-models { 
-            padding: 40px; 
+            padding: 20px; 
             text-align: center; 
-            color: #9a9a9a;
-            font-size: 14px;
+            color: var(--vscode-sidebar-fg);
+            font-size: 12px;
         }
         
         .messages { 
             flex: 1; 
             overflow-y: auto; 
-            padding: 24px 20px;
+            padding: 12px;
         }
         
         .messages::-webkit-scrollbar {
@@ -592,37 +622,22 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         
         .messages::-webkit-scrollbar-track {
             background: transparent;
-            margin: 4px;
         }
         
         .messages::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
-            border-radius: 5px;
-            border: 2px solid transparent;
-            background-clip: padding-box;
+            background: var(--vscode-scrollbar-bg);
+            border-radius: 0;
         }
         
         .messages::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, #5a5a5a 0%, #4a4a4a 100%);
+            background: var(--vscode-scrollbar-hover);
         }
         
         .msg { 
-            margin-bottom: 20px; 
+            margin-bottom: 12px; 
             display: flex;
-            gap: 12px;
-            animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 8px;
             align-items: flex-start;
-        }
-        
-        @keyframes fadeInUp {
-            from { 
-                opacity: 0; 
-                transform: translateY(16px) scale(0.98); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0) scale(1); 
-            }
         }
         
         .msg.user { 
@@ -630,82 +645,86 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         }
         
         .avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         
         .user .avatar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--vscode-button-bg);
         }
         
         .assistant .avatar {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            background: var(--vscode-button-bg);
         }
         
         .error .avatar {
-            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            background: var(--vscode-error);
         }
         
         .avatar svg {
-            width: 20px;
-            height: 20px;
-            stroke: #ffffff;
-            stroke-width: 2;
+            width: 26px;
+            height: 26px;
+            stroke: var(--vscode-button-fg);
+            stroke-width: 1.5;
             fill: none;
         }
         
+        .assistant .avatar svg {
+            stroke: #ffffff;
+        }
+        
+        .assistant .avatar svg circle {
+            fill: #ffffff;
+        }
+        
         .bubble { 
-            padding: 16px 20px; 
-            border-radius: 16px; 
-            max-width: 82%; 
-            line-height: 1.7;
+            padding: 8px 12px; 
+            border-radius: 4px; 
+            max-width: 85%; 
+            line-height: 1.5;
             word-wrap: break-word;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
             position: relative;
+            font-size: 12px;
         }
         
         .user .bubble { 
-            background: linear-gradient(135deg, #0e639c 0%, #007acc 50%, #0088dd 100%);
+            background: var(--vscode-button-bg);
             border: none;
-            color: #ffffff;
-            border-bottom-right-radius: 6px;
+            color: var(--vscode-button-fg);
         }
         
         .assistant .bubble { 
-            background: linear-gradient(135deg, rgba(45, 45, 48, 0.95) 0%, rgba(37, 37, 38, 0.95) 100%); 
-            border: 1px solid rgba(60, 60, 60, 0.6);
-            backdrop-filter: blur(20px);
-            border-bottom-left-radius: 6px;
+            background: var(--vscode-widget-bg); 
+            border: 1px solid var(--vscode-widget-border);
+            color: var(--vscode-editor-foreground);
         }
         
         .error .bubble { 
-            background: linear-gradient(135deg, rgba(90, 29, 29, 0.5) 0%, rgba(60, 20, 20, 0.5) 100%); 
-            border: 1px solid #5a1d1d; 
-            color: #f48771;
+            background: var(--vscode-widget-bg);
+            border: 1px solid var(--vscode-error);
+            color: var(--vscode-error);
         }
         
         .bubble pre { 
-            background: linear-gradient(135deg, #1e1e1e 0%, #1a1a1a 100%); 
-            border-radius: 12px; 
+            background: var(--vscode-widget-bg); 
+            border-radius: 4px; 
             overflow: hidden; 
-            margin: 18px 0; 
-            border: 1px solid rgba(60, 60, 60, 0.7);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            margin: 8px 0; 
+            border: 1px solid var(--vscode-widget-border);
         }
         
         .bubble pre code { 
             display: block; 
-            padding: 18px; 
+            padding: 8px; 
             overflow-x: auto; 
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace; 
-            font-size: 13px; 
-            line-height: 1.7; 
+            font-family: var(--vscode-editor-font-family, 'Consolas', 'Monaco', 'Courier New', monospace); 
+            font-size: 11px; 
+            line-height: 1.5; 
             background: none;
         }
         
@@ -713,383 +732,259 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            padding: 12px 18px; 
-            background: linear-gradient(90deg, #2d2d30 0%, #252526 100%); 
-            border-bottom: 1px solid rgba(60, 60, 60, 0.6);
+            padding: 4px 8px; 
+            background: var(--vscode-widget-bg); 
+            border-bottom: 1px solid var(--vscode-widget-border);
         }
         
         .code-lang { 
-            font-size: 12px; 
-            color: #a0a0a0; 
-            font-family: 'Consolas', 'Monaco', monospace; 
-            text-transform: uppercase; 
-            letter-spacing: 0.8px;
-            font-weight: 600;
+            font-size: 11px; 
+            color: var(--vscode-sidebar-fg); 
+            font-family: var(--vscode-editor-font-family, 'Consolas', 'Monaco', monospace); 
+            text-transform: uppercase;
         }
         
         .copy-btn { 
-            background: rgba(255, 255, 255, 0.05); 
-            color: #858585; 
-            border: 1px solid rgba(60, 60, 60, 0.8); 
-            border-radius: 8px; 
-            padding: 7px 12px; 
+            background: transparent; 
+            color: var(--vscode-sidebar-fg); 
+            border: 1px solid transparent; 
+            border-radius: 4px; 
+            padding: 4px 8px; 
             cursor: pointer; 
             display: flex; 
             align-items: center; 
-            gap: 6px; 
-            font-size: 12px; 
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 4px; 
+            font-size: 11px; 
+            transition: all 0.15s ease;
         }
         
         .copy-btn:hover { 
-            color: #ffffff; 
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(100, 100, 100, 0.9);
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-        
-        .copy-btn:active {
-            transform: translateY(0);
+            color: var(--vscode-fg); 
+            background: var(--vscode-list-hover);
+            border-color: var(--vscode-widget-border);
         }
         
         .copy-btn svg { 
-            width: 14px; 
-            height: 14px; 
+            width: 12px; 
+            height: 12px; 
             stroke: currentColor; 
             stroke-width: 2; 
             fill: none;
         }
         
         .copy-btn.copied { 
-            color: #4ec9b0;
-            border-color: #4ec9b0;
-            background: rgba(78, 201, 176, 0.15);
-            box-shadow: 0 0 12px rgba(78, 201, 176, 0.2);
+            color: var(--vscode-success);
+            border-color: var(--vscode-success);
         }
         
         .bubble code { 
-            background: rgba(255, 255, 255, 0.12); 
-            padding: 4px 10px; 
-            border-radius: 6px; 
-            font-family: 'Consolas', 'Monaco', monospace; 
-            font-size: 0.88em;
-            color: #4ec9b0;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--vscode-widget-bg); 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-family: var(--vscode-editor-font-family, 'Consolas', 'Monaco', monospace); 
+            font-size: 11px;
+            color: var(--vscode-success);
+            border: 1px solid var(--vscode-widget-border);
         }
         
         .user .bubble code {
-            background: rgba(255, 255, 255, 0.25);
-            color: #ffffff;
-            border-color: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--vscode-button-fg);
+            border-color: rgba(255, 255, 255, 0.3);
         }
         
         .bubble a { 
-            color: #3794ff; 
+            color: var(--vscode-link); 
             text-decoration: none;
-            transition: all 0.2s ease;
-            padding: 2px 4px;
-            border-radius: 4px;
+            transition: all 0.15s ease;
         }
         
         .bubble a:hover {
-            color: #4da6ff;
-            background: rgba(55, 148, 255, 0.1);
-            text-decoration: none;
+            text-decoration: underline;
         }
         
         .bubble strong { 
-            color: #ffffff; 
-            font-weight: 700;
+            color: var(--vscode-fg); 
+            font-weight: 600;
         }
         
         .bubble em { 
-            color: #e0e0e0;
+            color: var(--vscode-fg);
             font-style: italic;
         }
         
         .bubble hr { 
             border: none; 
-            border-top: 2px solid rgba(60, 60, 60, 0.5); 
-            margin: 24px 0;
-            border-radius: 2px;
+            border-top: 1px solid var(--vscode-border); 
+            margin: 12px 0;
         }
         
         .bubble img { 
             max-width: 100%; 
-            border-radius: 10px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
         }
         
-        .hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-name, .hljs-tag { color: #569cd6; }
-        .hljs-string, .hljs-title, .hljs-section, .hljs-attribute, .hljs-literal, .hljs-template-tag, .hljs-template-variable, .hljs-type { color: #ce9178; }
-        .hljs-comment, .hljs-deletion { color: #6a9955; }
-        .hljs-number, .hljs-regexp, .hljs-addition { color: #b5cea8; }
-        .hljs-function { color: #dcdcaa; }
-        .hljs-variable, .hljs-params { color: #9cdcfe; }
-        .hljs-class .hljs-title { color: #4ec9b0; }
-        .hljs-symbol, .hljs-bullet { color: #d4d4d4; }
-        .hljs-meta { color: #808080; }
-        .hljs-link { color: #3794ff; text-decoration: underline; }
+        .assistant .bubble h1, .assistant .bubble h2, .assistant .bubble h3, .assistant .bubble h4, .assistant .bubble h5, .assistant .bubble h6,
+        .user .bubble h1, .user .bubble h2, .user .bubble h3, .user .bubble h4, .user .bubble h5, .user .bubble h6 {
+            color: var(--vscode-editor-foreground) !important;
+            margin: 12px 0 8px 0;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+        
+        .bubble h1 { font-size: 1.6em; }
+        .bubble h2 { font-size: 1.4em; }
+        .bubble h3 { font-size: 1.2em; }
+        .bubble h4 { font-size: 1.1em; }
+        .bubble h5, .bubble h6 { font-size: 1em; }
+        
+        .bubble p {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+        
+        .bubble ul, .bubble ol {
+            margin: 8px 0 8px 20px;
+            padding: 0;
+        }
+        
+        .bubble li {
+            margin: 4px 0;
+            line-height: 1.6;
+        }
+        
+        .bubble blockquote {
+            border-left: 3px solid var(--vscode-border);
+            padding-left: 12px;
+            margin: 8px 0;
+            color: var(--vscode-editor-foreground);
+            opacity: 0.9;
+        }
+        
+        .bubble table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+        }
+        
+        .bubble tr {
+            border-bottom: 1px solid var(--vscode-border);
+        }
+        
+        .bubble th, .bubble td {
+            padding: 8px 12px;
+            text-align: left;
+            color: var(--vscode-editor-foreground);
+        }
+        
+        .bubble code:not(pre code) {
+            background: var(--vscode-widget-bg);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 0.9em;
+            color: var(--vscode-editor-foreground);
+            border: 1px solid var(--vscode-widget-border);
+        }
+        
+        .bubble a {
+            color: var(--vscode-link);
+            text-decoration: none;
+        }
+        
+        .bubble a:hover {
+            text-decoration: underline;
+        }
+        
+        .hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-name, .hljs-tag { color: var(--vscode-textLink-foreground); }
+        .hljs-string, .hljs-title, .hljs-section, .hljs-attribute, .hljs-literal, .hljs-template-tag, .hljs-template-variable, .hljs-type { color: var(--vscode-editor-foreground); }
+        .hljs-comment, .hljs-deletion { color: var(--vscode-editor-foreground); opacity: 0.6; }
+        .hljs-number, .hljs-regexp, .hljs-addition { color: var(--vscode-textLink-foreground); }
+        .hljs-function { color: var(--vscode-textLink-foreground); }
+        .hljs-variable, .hljs-params { color: var(--vscode-editor-foreground); }
+        .hljs-class .hljs-title { color: var(--vscode-textLink-foreground); }
+        .hljs-symbol, .hljs-bullet { color: var(--vscode-editor-foreground); }
+        .hljs-meta { color: var(--vscode-editor-foreground); opacity: 0.7; }
+        .hljs-link { color: var(--vscode-link); text-decoration: underline; }
         
         .input-area { 
-            padding: 14px 16px; 
-            border-top: 1px solid rgba(60, 60, 60, 0.6); 
-            background: linear-gradient(0deg, #252526 0%, #2d2d30 100%);
-            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+            padding: 8px; 
+            border-top: 1px solid var(--vscode-border); 
+            background: var(--vscode-bg);
         }
         
         .input-wrap { 
             display: flex; 
-            gap: 12px; 
+            gap: 8px; 
             align-items: flex-end;
         }
         
         textarea { 
             flex: 1; 
-            padding: 14px 18px; 
-            background: rgba(255, 255, 255, 0.06); 
-            color: #e0e0e0; 
-            border: 1px solid rgba(60, 60, 60, 0.8); 
-            border-radius: 12px;
+            padding: 6px 8px; 
+            background: var(--vscode-input-bg); 
+            color: var(--vscode-input-fg); 
+            border: 1px solid var(--vscode-input-border); 
+            border-radius: 4px;
             resize: none; 
             font-family: inherit; 
-            font-size: 14px; 
-            line-height: 1.7; 
-            min-height: 52px; 
-            max-height: 160px;
-            -webkit-appearance: none; 
-            appearance: none; 
+            font-size: 12px; 
+            line-height: 1.5; 
+            min-height: 32px; 
+            max-height: 120px;
             overflow-y: auto;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.15s ease;
         }
         
         textarea::-webkit-scrollbar {
-            width: 8px;
+            width: 10px;
         }
         
         textarea::-webkit-scrollbar-track {
             background: transparent;
-            margin: 4px;
         }
         
         textarea::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
-            border-radius: 4px;
-            border: 2px solid transparent;
-            background-clip: padding-box;
+            background: var(--vscode-scrollbar-bg);
+            border-radius: 0;
         }
         
         textarea:focus { 
             outline: none; 
-            border-color: #0e639c;
-            background: rgba(14, 99, 156, 0.12);
-            box-shadow: 0 0 0 3px rgba(14, 99, 156, 0.25), inset 0 1px 4px rgba(0, 0, 0, 0.2);
+            border-color: var(--vscode-focus-border);
+            background: var(--vscode-input-bg);
         }
         
         textarea::placeholder {
-            color: #6a6a6a;
+            color: var(--vscode-sidebar-fg);
         }
         
         button#sendBtn { 
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            width: 50px; 
-            height: 50px; 
-            background: linear-gradient(135deg, #0e639c 0%, #007acc 50%, #0088dd 100%);
-            color: #ffffff; 
+            width: 32px; 
+            height: 32px; 
+            background: var(--vscode-button-bg);
+            color: var(--vscode-button-fg); 
             border: none; 
-            border-radius: 14px;
+            border-radius: 4px;
             cursor: pointer; 
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+            transition: all 0.15s ease; 
             flex-shrink: 0;
-            box-shadow: 0 4px 16px rgba(0, 122, 204, 0.4);
         }
         
         button#sendBtn:hover { 
-            background: linear-gradient(135deg, #1177bb 0%, #0088dd 50%, #1199ee 100%);
-            transform: translateY(-2px) scale(1.05);
-            box-shadow: 0 6px 24px rgba(0, 122, 204, 0.5);
-        }
-        
-        button#sendBtn:active {
-            transform: translateY(0) scale(0.97);
-            box-shadow: 0 2px 12px rgba(0, 122, 204, 0.4);
+            background: var(--vscode-button-hover);
         }
         
         button#sendBtn:disabled { 
-            background: linear-gradient(135deg, #3c3c3c 0%, #333333 100%); 
+            background: var(--vscode-input-bg); 
+            color: var(--vscode-sidebar-fg);
             cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
         }
         
         button#sendBtn svg { 
-            width: 24px; 
-            height: 24px; 
-            stroke: currentColor; 
-            stroke-width: 2.2; 
-            fill: none;
-        }
-        
-        .welcome { 
-            text-align: center; 
-            padding: 100px 24px; 
-            color: #858585;
-        }
-        
-        .welcome-icon { 
-            width: 80px; 
-            height: 80px; 
-            margin: 0 auto 28px; 
-            stroke: #0e639c; 
-            stroke-width: 1.5; 
-            fill: none;
-            animation: breathe 3s ease-in-out infinite;
-            filter: drop-shadow(0 4px 12px rgba(14, 99, 156, 0.3));
-        }
-        
-        @keyframes breathe {
-            0%, 100% { 
-                opacity: 0.7; 
-                transform: scale(1); 
-                filter: drop-shadow(0 4px 12px rgba(14, 99, 156, 0.3));
-            }
-            50% { 
-                opacity: 1; 
-                transform: scale(1.08); 
-                filter: drop-shadow(0 6px 20px rgba(14, 99, 156, 0.5));
-            }
-        }
-        
-        .welcome h2 { 
-            color: #ffffff; 
-            margin-bottom: 12px; 
-            font-weight: 600;
-            font-size: 22px;
-            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .welcome p {
-            font-size: 15px;
-            color: #9a9a9a;
-            line-height: 1.7;
-        }
-        
-        .history-panel { 
-            display: none; 
-            position: absolute; 
-            top: 100%; 
-            left: 12px; 
-            right: 12px; 
-            background: linear-gradient(135deg, #252526 0%, #1e1e1e 100%); 
-            border: 1px solid rgba(60, 60, 60, 0.8); 
-            border-radius: 12px; 
-            max-height: 340px; 
-            overflow-y: auto; 
-            z-index: 100;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
-            animation: slideDownFade 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            margin-top: 6px;
-        }
-        
-        @keyframes slideDownFade {
-            from { 
-                opacity: 0; 
-                transform: translateY(-12px) scale(0.96); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0) scale(1); 
-            }
-        }
-        
-        .history-panel::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        .history-panel::-webkit-scrollbar-track {
-            background: transparent;
-            margin: 8px;
-        }
-        
-        .history-panel::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
-            border-radius: 4px;
-            border: 2px solid transparent;
-            background-clip: padding-box;
-        }
-        
-        .history-panel.show { display: block; }
-        
-        .history-item { 
-            padding: 14px 18px; 
-            cursor: pointer; 
-            border-bottom: 1px solid rgba(60, 60, 60, 0.5); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .history-item:last-child { border-bottom: none; }
-        
-        .history-item:hover { 
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateX(2px);
-        }
-        
-        .history-item.active { 
-            background: rgba(14, 99, 156, 0.25);
-            border-left: 4px solid #0e639c;
-            padding-left: 14px;
-        }
-        
-        .history-item .title { 
-            flex: 1; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-            white-space: nowrap;
-            color: #d4d4d4;
-            font-size: 14px;
-            font-weight: 500;
-        }
-        
-        .history-item .meta { 
-            font-size: 12px; 
-            color: #9a9a9a; 
-            margin-left: 14px;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 4px 10px;
-            border-radius: 8px;
-            border: 1px solid rgba(60, 60, 60, 0.5);
-        }
-        
-        .history-item .delete-btn { 
-            background: none; 
-            border: none; 
-            color: #858585; 
-            cursor: pointer; 
-            padding: 8px; 
-            margin-left: 10px; 
-            display: flex; 
-            align-items: center;
-            border-radius: 8px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .history-item .delete-btn:hover { 
-            color: #f48771; 
-            background: rgba(244, 135, 113, 0.15);
-            transform: scale(1.05);
-        }
-        
-        .history-item .delete-btn svg { 
             width: 16px; 
             height: 16px; 
             stroke: currentColor; 
@@ -1097,61 +992,139 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             fill: none;
         }
         
-        .no-history { 
-            padding: 40px; 
+        .welcome { 
             text-align: center; 
-            color: #9a9a9a;
+            padding: 60px 24px; 
+            color: var(--vscode-sidebar-fg);
+        }
+        
+        .welcome-icon { 
+            width: 48px; 
+            height: 48px; 
+            margin: 0 auto 16px; 
+            stroke: var(--vscode-button-bg); 
+            stroke-width: 1.5; 
+            fill: none;
+            animation: breathe 3s ease-in-out infinite;
+        }
+        
+        @keyframes breathe {
+            0%, 100% { 
+                transform: scale(1); 
+                opacity: 1; 
+            }
+            50% { 
+                transform: scale(1.08); 
+                opacity: 0.85; 
+            }
+        }
+        
+        .welcome h2 { 
+            color: var(--vscode-fg); 
+            margin-bottom: 8px; 
+            font-weight: 500;
             font-size: 14px;
         }
         
-        .prompt-area { 
-            border-top: 1px solid rgba(60, 60, 60, 0.6); 
-            padding: 12px 16px;
-            background: linear-gradient(0deg, #252526 0%, #2a2a2a 100%);
+        .welcome p {
+            font-size: 12px;
+            color: var(--vscode-sidebar-fg);
+            line-height: 1.5;
         }
         
-        .prompt-header { 
+        .history-panel { 
+            display: none; 
+            position: absolute; 
+            top: 100%; 
+            left: 8px; 
+            right: 8px; 
+            background: var(--vscode-widget-bg); 
+            border: 1px solid var(--vscode-widget-border); 
+            border-radius: 4px; 
+            max-height: 240px; 
+            overflow-y: auto; 
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-top: 4px;
+        }
+        
+        .history-panel::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        .history-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .history-panel::-webkit-scrollbar-thumb {
+            background: var(--vscode-scrollbar-bg);
+            border-radius: 0;
+        }
+        
+        .history-panel.show { display: block; }
+        
+        .history-item { 
+            padding: 6px 8px; 
+            cursor: pointer; 
+            border-bottom: 1px solid var(--vscode-border); 
             display: flex; 
             justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 10px;
+            align-items: center;
+            transition: all 0.15s ease;
         }
         
-        .prompt-label { 
-            font-size: 12px; 
-            color: #9a9a9a;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
+        .history-item:last-child { border-bottom: none; }
+        
+        .history-item:hover { 
+            background: var(--vscode-list-hover);
         }
         
-        .prompt-actions { 
-            display: flex; 
-            gap: 6px;
+        .history-item.active { 
+            background: var(--vscode-list-active);
         }
         
-        .prompt-actions button { 
-            background: transparent; 
-            color: #858585; 
-            border: 1px solid transparent;
+        .history-item .title { 
+            flex: 1; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap;
+            color: var(--vscode-fg);
+            font-size: 12px;
+        }
+        
+        .history-item.active .title {
+            color: var(--vscode-button-fg);
+        }
+        
+        .history-item .meta { 
+            font-size: 11px; 
+            color: var(--vscode-sidebar-fg); 
+            margin-left: 8px;
+            background: var(--vscode-widget-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--vscode-widget-border);
+        }
+        
+        .history-item .delete-btn { 
+            background: none; 
+            border: none; 
+            color: var(--vscode-sidebar-fg); 
             cursor: pointer; 
-            padding: 7px 10px; 
-            font-size: 12px; 
+            padding: 4px; 
+            margin-left: 4px; 
             display: flex; 
-            align-items: center; 
-            gap: 4px;
-            border-radius: 8px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            align-items: center;
+            border-radius: 4px;
+            transition: all 0.15s ease;
         }
         
-        .prompt-actions button:hover { 
-            color: #cccccc; 
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.1);
-            transform: translateY(-1px);
+        .history-item .delete-btn:hover { 
+            color: var(--vscode-error); 
+            background: var(--vscode-list-hover);
         }
         
-        .prompt-actions button svg { 
+        .history-item .delete-btn svg { 
             width: 14px; 
             height: 14px; 
             stroke: currentColor; 
@@ -1159,48 +1132,106 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             fill: none;
         }
         
+        .no-history { 
+            padding: 20px; 
+            text-align: center; 
+            color: var(--vscode-sidebar-fg);
+            font-size: 12px;
+        }
+        
+        .prompt-area { 
+            border-top: 1px solid var(--vscode-border); 
+            padding: 8px;
+            background: var(--vscode-bg);
+        }
+        
+        .prompt-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 6px;
+        }
+        
+        .prompt-label { 
+            font-size: 11px; 
+            color: var(--vscode-sidebar-fg);
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .prompt-actions { 
+            display: flex; 
+            gap: 4px;
+        }
+        
+        .prompt-actions button { 
+            background: transparent; 
+            color: var(--vscode-sidebar-fg); 
+            border: 1px solid transparent;
+            cursor: pointer; 
+            padding: 4px 6px; 
+            font-size: 11px; 
+            display: flex; 
+            align-items: center; 
+            gap: 4px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+        }
+        
+        .prompt-actions button:hover { 
+            color: var(--vscode-fg); 
+            background: var(--vscode-list-hover);
+            border-color: var(--vscode-widget-border);
+        }
+        
+        .prompt-actions button svg { 
+            width: 12px; 
+            height: 12px; 
+            stroke: currentColor; 
+            stroke-width: 2; 
+            fill: none;
+        }
+        
         #promptInput { 
             width: 100%; 
-            min-height: 52px; 
-            max-height: 120px; 
-            padding: 12px 14px; 
-            background: rgba(255, 255, 255, 0.04); 
-            color: #d4d4d4; 
-            border: 1px solid rgba(60, 60, 60, 0.8); 
-            border-radius: 10px;
+            min-height: 32px; 
+            max-height: 80px; 
+            padding: 6px 8px; 
+            background: var(--vscode-input-bg); 
+            color: var(--vscode-input-fg); 
+            border: 1px solid var(--vscode-input-border); 
+            border-radius: 4px;
             resize: vertical; 
             font-family: inherit; 
-            font-size: 13px; 
-            line-height: 1.6;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.15);
+            font-size: 12px; 
+            line-height: 1.5;
+            transition: all 0.15s ease;
         }
         
         #promptInput:focus { 
             outline: none; 
-            border-color: #5c5c5c;
-            background: rgba(255, 255, 255, 0.06);
-            box-shadow: 0 0 0 3px rgba(92, 92, 92, 0.2), inset 0 1px 4px rgba(0, 0, 0, 0.15);
+            border-color: var(--vscode-focus-border);
+            background: var(--vscode-input-bg);
         }
         
         #promptInput::-webkit-scrollbar {
-            width: 6px;
+            width: 10px;
         }
         
         #promptInput::-webkit-scrollbar-thumb {
-            background: #4a4a4a;
-            border-radius: 3px;
+            background: var(--vscode-scrollbar-bg);
+            border-radius: 0;
         }
         
         #promptInput::placeholder { 
-            color: #6a6a6a;
+            color: var(--vscode-sidebar-fg);
         }
         
         .prompt-collapsed #promptInput { display: none; }
         
         .prompt-toggle { 
             transform: rotate(180deg); 
-            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.15s ease;
         }
         
         .prompt-collapsed .prompt-toggle { 
@@ -1210,17 +1241,16 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         .thinking {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 16px 24px;
+            gap: 4px;
+            padding: 8px 12px;
         }
         
         .thinking .dot {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
-            background: #0e639c;
+            background: var(--vscode-button-bg);
             animation: bounce 1.4s ease-in-out infinite;
-            box-shadow: 0 0 8px rgba(14, 99, 156, 0.6);
         }
         
         .thinking .dot:nth-child(1) {
@@ -1268,7 +1298,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     </div>
     <div id="messages" class="messages">
         <div class="welcome">
-            <svg class="welcome-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></svg>
+            <svg class="welcome-icon" viewBox="2 1 20 20"><path d="M12 4l6 3.5v7L12 18l-6-3.5v-7L12 4z" fill="none" stroke-width="1.5"/><circle cx="12" cy="11" r="2"/></svg>
             <h2>RemoteTest AI 助手</h2>
             <p>输入问题开始对话</p>
         </div>
@@ -1347,9 +1377,9 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             
             let avatarHtml = '';
             if (role === 'user') {
-                avatarHtml = '<div class="avatar"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
-            } else if (role === 'assistant') {
-                avatarHtml = '<div class="avatar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></svg></div>';
+                    avatarHtml = '<div class="avatar"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+                } else if (role === 'assistant') {
+                    avatarHtml = '<div class="avatar"><svg viewBox="2 1 20 20"><path d="M12 4l6 3.5v7L12 18l-6-3.5v-7L12 4z" fill="none" stroke-width="1.5"/><circle cx="12" cy="11" r="2"/></svg></div>';
             } else if (role === 'error') {
                 avatarHtml = '<div class="avatar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></div>';
             }
@@ -1382,7 +1412,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         function renderMessages(msgs) {
             messages.innerHTML = '';
             if (!msgs || msgs.length === 0) {
-                messages.innerHTML = '<div class="welcome"><svg class="welcome-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></svg><h2>RemoteTest AI 助手</h2><p>输入问题开始对话</p></div>';
+                messages.innerHTML = '<div class="welcome"><svg class="welcome-icon" viewBox="2 1 20 20"><path d="M12 4l6 3.5v7L12 18l-6-3.5v-7L12 4z" fill="none" stroke-width="1.5"/><circle cx="12" cy="11" r="2"/></svg><h2>RemoteTest AI 助手</h2><p>输入问题开始对话</p></div>';
                 return;
             }
             msgs.filter(m => m.role !== 'system').forEach(m => {
@@ -1393,7 +1423,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 if (m.role === 'user') {
                     avatarHtml = '<div class="avatar"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
                 } else if (m.role === 'assistant') {
-                    avatarHtml = '<div class="avatar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></svg></div>';
+                    avatarHtml = '<div class="avatar"><svg viewBox="2 1 20 20"><path d="M12 4l6 3.5v7L12 18l-6-3.5v-7L12 4z" fill="none" stroke-width="1.5"/><circle cx="12" cy="11" r="2"/></svg></div>';
                 } else if (m.role === 'error') {
                     avatarHtml = '<div class="avatar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></div>';
                 }
@@ -1445,7 +1475,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             if (welcome) welcome.remove();
             const div = document.createElement('div');
             div.className = 'msg assistant';
-            div.innerHTML = '<div class="avatar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></svg></div><div class="bubble thinking"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+            div.innerHTML = '<div class="avatar"><svg viewBox="2 1 20 20"><path d="M12 4l6 3.5v7L12 18l-6-3.5v-7L12 4z" fill="none" stroke-width="1.5"/><circle cx="12" cy="11" r="2"/></svg></div><div class="bubble thinking"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
             div.id = 'thinkingMsg';
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
