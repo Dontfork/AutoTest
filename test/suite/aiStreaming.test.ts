@@ -1,10 +1,8 @@
 import * as assert from 'assert';
 import { describe, it } from 'mocha';
+import { MockAIMessage } from '../helpers';
 
-interface AIMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-}
+type AIMessage = MockAIMessage;
 
 interface StreamChunk {
     content: string;

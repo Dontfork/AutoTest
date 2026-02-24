@@ -1,77 +1,158 @@
 # 命令执行模块 (CommandExecutor Module)
 
+> ⚡ 远程命令执行引擎 - 通过 SSH 在远程服务器执行命令并处理输出
+
+## 📑 目录导航
+
+| 章节 | 描述 |
+|------|------|
+| [1. 模块概述](#1-模块概述) | 功能简介与核心能力 |
+| [2. 架构设计](#2-架构设计) | 整体架构与执行流程 |
+| [3. 类型定义](#3-类型定义) | 接口与变量定义 |
+| [4. 功能实现](#4-功能实现) | 核心方法详解 |
+| [5. 使用示例](#5-使用示例) | 配置与代码示例 |
+| [6. 错误处理](#6-错误处理) | 异常处理机制 |
+
+---
+
 ## 1. 模块概述
 
-命令执行模块负责通过 SSH 在远程服务器上执行命令，捕获输出并进行过滤处理。模块支持命令变量替换，允许在命令中使用文件路径等变量，实现灵活的测试执行配置。
+### 1.1 核心能力
 
-## 2. 设计方案
+```plantuml
+@startuml
+!theme plain
+skinparam componentStyle rectangle
 
-### 2.1 架构设计
+rectangle "🔌 SSH 执行\n远程命令" as SSH #FFF3E0
+rectangle "📝 变量替换\n灵活配置" as Var #E8F5E9
+rectangle "🔍 输出过滤\n正则匹配" as Filter #FCE4EC
+rectangle "📊 输出通道\n结果展示" as Output #FFF3E0
+rectangle "🔐 多种认证\n密钥/密码" as Auth #E8F5E9
+rectangle "⚙️ 命令配置\n可选/必选" as Config #FCE4EC
 
+SSH -[hidden]right- Var
+Var -[hidden]right- Filter
+Filter -[hidden]down- Output
+Output -[hidden]right- Auth
+Auth -[hidden]right- Config
+
+@enduml
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                   CommandExecutor Module                     │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │              replaceVariables()                      │    │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐   │    │
-│  │  │ 原始命令  │→│ 变量替换  │→│ 替换后命令        │   │    │
-│  │  └──────────┘  └──────────┘  └──────────────────┘   │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                          ↓                                   │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │                   execute()                          │    │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐   │    │
-│  │  │ SSH连接   │→│ 执行命令  │→│ 过滤输出          │   │    │
-│  │  └──────────┘  └──────────┘  └──────────────────┘   │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+
+### 1.2 功能特性
+
+| 特性 | 图标 | 说明 |
+|------|:----:|------|
+| SSH 远程执行 | 🔌 | 通过 SSH 协议在远程服务器执行命令 |
+| 变量替换 | 📝 | 支持文件路径等变量动态替换 |
+| 输出过滤 | 🔍 | 支持包含/排除正则模式过滤 |
+| 多认证方式 | 🔐 | 支持密钥认证和密码认证 |
+| 输出通道 | 📊 | 支持 LogOutputChannel 和普通 OutputChannel |
+
+---
+
+## 2. 架构设计
+
+### 2.1 整体架构
+
+```plantuml
+@startuml
+!theme plain
+skinparam componentStyle rectangle
+skinparam backgroundColor #FEFEFE
+
+package "⚡ CommandExecutor Module" as Module #E3F2FD {
+    
+    package "📝 replaceVariables()" as ReplaceFunc #FFF3E0 {
+        [原始命令\npytest {filePath}] as RawCmd
+        [变量替换] as Replace
+        [替换后命令\npytest /tmp/test.py] as ReplacedCmd
+        RawCmd -> Replace -> ReplacedCmd
+    }
+    
+    package "⚡ execute()" as ExecFunc #E8F5E9 {
+        [SSH 连接\n🔌 建立] as SSHConn
+        [执行命令\n⚡ 远程执行] as Exec
+        [过滤输出\n🔍 正则匹配] as FilterOut
+        SSHConn -> Exec -> FilterOut
+    }
+    
+    ReplaceFunc --> ExecFunc : 替换后命令
+}
+
+@enduml
 ```
 
 ### 2.2 执行流程
 
-```
-用户触发命令
-    │
-    ▼
-匹配项目配置 (matchProject)
-    │
-    ├── 获取项目服务器配置
-    ├── 获取项目命令配置
-    │
-    ▼
-构建命令变量 (buildCommandVariables)
-    │
-    ▼
-变量替换 (replaceCommandVariables)
-    │
-    ▼
-executeRemoteCommand(command, outputChannel, serverConfig, commandConfig)
-    │
-    ├── 建立 SSH 连接
-    ├── 执行命令
-    ├── 捕获 stdout/stderr
-    ├── 过滤输出 (includePatterns/excludePatterns)
-    │
-    ▼
-返回执行结果
+```plantuml
+@startuml
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+start
+:👤 用户触发命令;
+
+:🔍 匹配项目配置
+<<matchProject>>;
+
+fork
+    :📋 获取项目服务器配置;
+fork again
+    :📋 获取项目命令配置;
+end fork
+
+:🔧 构建命令变量
+<<buildCommandVariables>>;
+
+:📝 变量替换
+<<replaceCommandVariables>>;
+
+partition "⚡ executeRemoteCommand" #E3F2FD {
+    :🔌 建立 SSH 连接;
+    :⚡ 执行命令;
+    :📥 捕获 stdout/stderr;
+    :🔍 过滤输出 (includePatterns/excludePatterns);
+}
+
+:📤 返回执行结果;
+
+stop
+
+@enduml
 ```
 
 ### 2.3 SSH 连接机制
 
+```plantuml
+@startuml
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+start
+:🚀 开始建立连接;
+
+:❓ 检查配置;
+
+if (认证方式?) then
+    switch (认证类型)
+    case (privateKeyPath)
+        :🔑 私钥认证;
+    case (password)
+        :🔐 密码认证;
+    endswitch
+endif
+
+:🔌 建立 SSH 连接;
+:⚡ 执行命令;
+
+stop
+
+@enduml
 ```
-SSH 连接建立
-    │
-    ├── 检查 privateKeyPath 配置
-    │   ├── 存在 → 使用私钥认证
-    │   └── 不存在 → 使用 password 认证
-    │
-    ├── 建立 SSH 连接
-    │
-    └── 执行命令
-```
+
+---
 
 ## 3. 类型定义
 
@@ -105,57 +186,110 @@ interface CommandVariables {
 
 ### 3.3 支持的变量
 
-| 变量 | 说明 | 示例值 |
-|------|------|--------|
-| `{filePath}` | 远程文件完整路径 | `/tmp/RemoteTest/tests/test_example.py` |
-| `{fileName}` | 远程文件名 | `test_example.py` |
-| `{fileDir}` | 远程文件所在目录 | `/tmp/RemoteTest/tests` |
-| `{localPath}` | 本地文件完整路径 | `D:\project\tests\test_example.py` |
-| `{localDir}` | 本地文件所在目录 | `D:\project\tests` |
-| `{localFileName}` | 本地文件名 | `test_example.py` |
-| `{remoteDir}` | 远程工程目录 | `/tmp/RemoteTest` |
+```plantuml
+@startuml
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title 📝 命令变量列表
+
+|变量|说明|示例值|
+|<#E3F2FD>{filePath}|远程文件完整路径|/tmp/RemoteTest/tests/...|
+|<#E8F5E9>{fileName}|远程文件名|test_example.py|
+|<#FFF3E0>{fileDir}|远程文件所在目录|/tmp/RemoteTest/tests|
+|<#FCE4EC>{localPath}|本地文件完整路径|D:\project\tests\...|
+|<#E3F2FD>{localDir}|本地文件所在目录|D:\project\tests|
+|<#E8F5E9>{localFileName}|本地文件名|test_example.py|
+|<#FFF3E0>{remoteDir}|远程工程目录|/tmp/RemoteTest|
+
+@enduml
+```
 
 ### 3.4 过滤模式
 
-| 模式 | 行为 | 使用场景 |
-|------|------|----------|
-| includePatterns | 只保留匹配正则的行 | 只查看错误和失败信息 |
-| excludePatterns | 排除匹配正则的行 | 过滤掉调试信息 |
+| 模式 | 图标 | 行为 | 使用场景 |
+|------|:----:|------|----------|
+| includePatterns | ✅ | 只保留匹配正则的行 | 只查看错误和失败信息 |
+| excludePatterns | ❌ | 排除匹配正则的行 | 过滤掉调试信息 |
+
+---
 
 ## 4. 功能实现
 
 ### 4.1 核心方法
 
-#### executeRemoteCommand(command, outputChannel?, serverConfig?, commandConfig?)
+```plantuml
+@startuml
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam componentStyle rectangle
 
-执行指定命令并返回过滤后的输出。
+title ⚡ 核心方法列表
 
-**参数**：
-- `command`: 要执行的命令字符串
-- `outputChannel`: 可选的输出通道
-- `serverConfig`: 服务器配置
-- `commandConfig`: 命令配置（包含过滤规则）
+rectangle "⚡ executeRemoteCommand" as Exec #E3F2FD
+rectangle "📝 replaceCommandVariables" as Replace #E8F5E9
+rectangle "🔧 buildCommandVariables" as Build #FFF3E0
 
-**返回值**：
-- `Promise<{ stdout: string; stderr: string; code: number; filteredOutput: string }>`
+@enduml
+```
 
-#### replaceCommandVariables(command: string, variables: CommandVariables): string
+**⚡ executeRemoteCommand:**
+- 执行指定命令并返回过滤后的输出
 
-替换命令中的变量。
+**参数:**
+- command: 要执行的命令字符串
+- outputChannel?: 可选的输出通道
+- serverConfig?: 服务器配置
+- commandConfig?: 命令配置（包含过滤规则）
 
-#### buildCommandVariables(localFilePath, remoteFilePath, remoteDir): CommandVariables
+**返回值:**
+`Promise<{ stdout, stderr, code, filteredOutput }>`
 
-构建命令变量对象。
+**📝 replaceCommandVariables:**
+- 替换命令中的变量
 
-### 4.2 输出过滤
+**参数:**
+- command: 包含变量的命令字符串
+- variables: 命令变量对象
 
-#### filterCommandOutput(output, includePatterns?, excludePatterns?): string
+**返回值:**
+`string: 替换后的命令`
 
-过滤输出内容。
+**🔧 buildCommandVariables:**
+- 构建命令变量对象
 
-- 先应用 includePatterns（只保留匹配的行）
-- 再应用 excludePatterns（排除匹配的行）
-- 支持正则表达式匹配
+**参数:**
+- localFilePath: 本地文件路径
+- remoteFilePath: 远程文件路径
+- remoteDir: 远程目录
+
+**返回值:**
+`CommandVariables: 命令变量对象`
+
+### 4.2 输出过滤流程
+
+```plantuml
+@startuml
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+start
+:📥 原始输出;
+
+:✅ includePatterns
+只保留匹配的行;
+
+:❌ excludePatterns
+排除匹配的行;
+
+:📤 过滤后输出;
+
+stop
+
+@enduml
+```
+
+---
 
 ## 5. 使用示例
 
@@ -198,43 +332,64 @@ console.log('Filtered output:', result.filteredOutput);
 
 ### 5.3 常用命令配置
 
-**Python pytest**:
+```plantuml
+@startuml
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title 📋 常用命令配置模板
+
+rectangle "🐍 Python pytest" as PyTest #E3F2FD
+rectangle "📜 JavaScript Jest" as Jest #E8F5E9
+rectangle "☕ Java Maven" as Maven #FFF3E0
+
+@enduml
+```
+
+**🐍 Python pytest:**
+
 ```json
 {
-    "name": "运行测试",
-    "executeCommand": "cd {remoteDir} && pytest {filePath} -v",
-    "includePatterns": ["PASSED", "FAILED", "ERROR"]
+  "name": "运行测试",
+  "executeCommand": "cd {remoteDir} && pytest {filePath} -v",
+  "includePatterns": ["PASSED", "FAILED", "ERROR"]
 }
 ```
 
-**JavaScript Jest**:
+**📜 JavaScript Jest:**
+
 ```json
 {
-    "name": "运行测试",
-    "executeCommand": "cd {remoteDir} && npx jest {filePath}",
-    "includePatterns": ["PASS", "FAIL", "✓", "✕"]
+  "name": "运行测试",
+  "executeCommand": "cd {remoteDir} && npx jest {filePath}",
+  "includePatterns": ["PASS", "FAIL", "✓", "✕"]
 }
 ```
 
-**Java Maven**:
+**☕ Java Maven:**
+
 ```json
 {
-    "name": "运行测试",
-    "executeCommand": "cd {remoteDir} && mvn test -Dtest={fileName}",
-    "includePatterns": ["Tests run:", "FAILURE", "ERROR"]
+  "name": "运行测试",
+  "executeCommand": "cd {remoteDir} && mvn test -Dtest={fileName}",
+  "includePatterns": ["Tests run:", "FAILURE", "ERROR"]
 }
 ```
 
-## 6. 输出通道管理
+### 5.4 输出通道管理
 
-| 通道名称 | 用途 |
-|----------|------|
-| RemoteTest | 插件自身的日志输出 |
-| TestOutput | 测试用例执行输出 |
+| 通道名称 | 图标 | 用途 |
+|----------|:----:|------|
+| RemoteTest | 📋 | 插件自身的日志输出 |
+| TestOutput | 📊 | 测试用例执行输出 |
 
 可通过 `useLogOutputChannel` 配置控制 TestOutput 使用 LogOutputChannel 还是普通 OutputChannel。
 
-## 7. 错误处理
+---
+
+## 6. 错误处理
+
+**⚠️ 错误处理机制**:
 
 | 错误场景 | 处理方式 |
 |----------|----------|
@@ -243,6 +398,17 @@ console.log('Filtered output:', result.filteredOutput);
 | SSH 连接失败 | 显示错误消息 |
 | 认证失败 | 检查密钥/密码配置 |
 
-## 8. 测试覆盖
+---
 
-详见：`test/suite/commandExecutor.test.ts`
+## 7. 测试覆盖
+
+| 测试类型 | 图标 | 测试文件 |
+|---------|:----:|---------|
+| 命令执行 | ⚡ | `test/suite/commandExecutor.test.ts` |
+| 变量替换 | 📝 | `test/suite/commandExecutor.test.ts` |
+| 输出过滤 | 🔍 | `test/suite/commandExecutor.test.ts` |
+| 错误处理 | ⚠️ | `test/suite/commandExecutor.test.ts` |
+
+---
+
+[返回顶部](#命令执行模块-commandexecutor-module)

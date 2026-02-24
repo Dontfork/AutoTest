@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ChatSession, AIMessage } from '../types';
+import { ChatSession, AIMessage, AgentMode, Plan, ToolCallRecord } from '../types';
 
 export class SessionManager {
     private sessions: Map<string, ChatSession> = new Map();
@@ -40,6 +40,12 @@ export class SessionManager {
                     const filePath = path.join(this.storagePath, file);
                     const content = fs.readFileSync(filePath, 'utf-8');
                     const session = JSON.parse(content) as ChatSession;
+                    if (!session.mode) {
+                        session.mode = 'ask';
+                    }
+                    if (!session.status) {
+                        session.status = 'active';
+                    }
                     this.sessions.set(session.id, session);
                 }
             }
@@ -67,13 +73,16 @@ export class SessionManager {
         }
     }
 
-    createSession(): ChatSession {
+    createSession(mode: AgentMode = 'ask', selectedProjects: string[] = []): ChatSession {
         const session: ChatSession = {
             id: this.generateId(),
             title: '新对话',
             messages: [],
             createdAt: Date.now(),
-            updatedAt: Date.now()
+            updatedAt: Date.now(),
+            mode: mode,
+            selectedProjects: selectedProjects,
+            status: 'active'
         };
         
         this.sessions.set(session.id, session);
@@ -182,6 +191,77 @@ export class SessionManager {
         
         session.messages = [];
         session.title = '新对话';
+        session.updatedAt = Date.now();
+        session.plan = undefined;
+        session.toolCalls = [];
+        session.status = 'active';
+        
+        this.saveSession(session);
+        this.emitChange();
+        
+        return session;
+    }
+
+    updatePlan(sessionId: string, plan: Plan | undefined): ChatSession | null {
+        const session = this.sessions.get(sessionId);
+        if (!session) return null;
+        
+        session.plan = plan;
+        session.updatedAt = Date.now();
+        
+        this.saveSession(session);
+        this.emitChange();
+        
+        return session;
+    }
+
+    addToolCall(sessionId: string, toolCall: ToolCallRecord): ChatSession | null {
+        const session = this.sessions.get(sessionId);
+        if (!session) return null;
+        
+        if (!session.toolCalls) {
+            session.toolCalls = [];
+        }
+        session.toolCalls.push(toolCall);
+        session.updatedAt = Date.now();
+        
+        this.saveSession(session);
+        this.emitChange();
+        
+        return session;
+    }
+
+    updateStatus(sessionId: string, status: 'active' | 'completed' | 'failed'): ChatSession | null {
+        const session = this.sessions.get(sessionId);
+        if (!session) return null;
+        
+        session.status = status;
+        session.updatedAt = Date.now();
+        
+        this.saveSession(session);
+        this.emitChange();
+        
+        return session;
+    }
+
+    updateSelectedProjects(sessionId: string, projects: string[]): ChatSession | null {
+        const session = this.sessions.get(sessionId);
+        if (!session) return null;
+        
+        session.selectedProjects = projects;
+        session.updatedAt = Date.now();
+        
+        this.saveSession(session);
+        this.emitChange();
+        
+        return session;
+    }
+
+    updateSessionMode(sessionId: string, mode: AgentMode): ChatSession | null {
+        const session = this.sessions.get(sessionId);
+        if (!session) return null;
+        
+        session.mode = mode;
         session.updatedAt = Date.now();
         
         this.saveSession(session);

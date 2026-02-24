@@ -2,19 +2,10 @@ import * as assert from 'assert';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import * as fs from 'fs';
 import * as path from 'path';
+import { MockAIMessage, MockChatSession, createMockAIMessage } from '../helpers';
 
-interface AIMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-}
-
-interface ChatSession {
-    id: string;
-    title: string;
-    messages: AIMessage[];
-    createdAt: number;
-    updatedAt: number;
-}
+type AIMessage = MockAIMessage;
+type ChatSession = MockChatSession;
 
 class MockSessionManager {
     private sessions: Map<string, ChatSession> = new Map();
@@ -613,13 +604,13 @@ describe('SessionManager System Prompt - 系统提示词持久化测试', () => 
 
 describe('AIChatView System Prompt - 系统提示词UI测试', () => {
     it('应处理saveSystemPrompt命令', () => {
-        const sourcePath = path.join(__dirname, '..', '..', '..', 'src', 'views', 'aiChatView.ts');
+        const sourcePath = path.join(__dirname, '..', '..', '..', 'src', 'views', 'messageHandler.ts');
         const source = fs.readFileSync(sourcePath, 'utf-8');
         assert.ok(source.includes("case 'saveSystemPrompt'"));
     });
 
     it('应处理getSystemPrompt命令', () => {
-        const sourcePath = path.join(__dirname, '..', '..', '..', 'src', 'views', 'aiChatView.ts');
+        const sourcePath = path.join(__dirname, '..', '..', '..', 'src', 'views', 'messageHandler.ts');
         const source = fs.readFileSync(sourcePath, 'utf-8');
         assert.ok(source.includes("case 'getSystemPrompt'"));
     });
@@ -631,20 +622,20 @@ describe('AIChatView System Prompt - 系统提示词UI测试', () => {
     });
 
     it('前端应监听systemPrompt消息', () => {
-        const sourcePath = path.join(__dirname, '..', '..', '..', 'src', 'views', 'aiChatView.ts');
+        const sourcePath = path.join(__dirname, '..', '..', '..', 'src', 'views', 'chatTemplate.ts');
         const source = fs.readFileSync(sourcePath, 'utf-8');
         assert.ok(source.includes("m.command === 'systemPrompt'"));
     });
 
     it('输入框变化时应保存系统提示词', () => {
-        const sourcePath = path.join(__dirname, '..', '..', '..', 'src', 'views', 'aiChatView.ts');
+        const sourcePath = path.join(__dirname, '..', '..', '..', 'src', 'views', 'chatTemplate.ts');
         const source = fs.readFileSync(sourcePath, 'utf-8');
         assert.ok(source.includes('promptInput.oninput'));
         assert.ok(source.includes("command: 'saveSystemPrompt'"));
     });
 
     it('清空按钮应保存空提示词', () => {
-        const sourcePath = path.join(__dirname, '..', '..', '..', 'src', 'views', 'aiChatView.ts');
+        const sourcePath = path.join(__dirname, '..', '..', '..', 'src', 'views', 'chatTemplate.ts');
         const source = fs.readFileSync(sourcePath, 'utf-8');
         assert.ok(source.includes('clearPromptBtn.onclick'));
         assert.ok(source.includes("prompt: ''"));

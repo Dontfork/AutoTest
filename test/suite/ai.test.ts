@@ -1,65 +1,46 @@
 import * as assert from 'assert';
 import { describe, it, beforeEach } from 'mocha';
-
-interface AIMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-}
-
-interface AIResponse {
-    content: string;
-    error?: string;
-}
-
-interface AIModelConfig {
-    name: string;
-    apiKey: string;
-    apiUrl?: string;
-}
-
-interface AIConfig {
-    models: AIModelConfig[];
-    defaultModel?: string;
-}
-
-interface ChatSession {
-    id: string;
-    title: string;
-    messages: AIMessage[];
-    createdAt: number;
-    updatedAt: number;
-}
+import {
+    MockAIMessage,
+    MockAIResponse,
+    MockAIModelConfig,
+    MockAIConfig,
+    MockChatSession,
+    createMockAIMessage,
+    createMockChatSession,
+    createMockAIConfig
+} from '../helpers';
 
 describe('AI Module - AI对话模块测试', () => {
     describe('Message Management - 消息管理', () => {
-        let messages: AIMessage[];
+        let messages: MockAIMessage[];
 
         beforeEach(() => {
             messages = [];
         });
 
         it('添加用户消息 - role为user，content为用户输入', () => {
-            messages.push({ role: 'user', content: 'Hello' });
+            messages.push(createMockAIMessage({ role: 'user', content: 'Hello' }));
             assert.strictEqual(messages.length, 1);
             assert.strictEqual(messages[0].role, 'user');
         });
 
         it('添加助手消息 - role为assistant，content为AI回复', () => {
-            messages.push({ role: 'assistant', content: 'Hi there!' });
+            messages.push(createMockAIMessage({ role: 'assistant', content: 'Hi there!' }));
             assert.strictEqual(messages.length, 1);
             assert.strictEqual(messages[0].role, 'assistant');
         });
 
         it('添加系统消息 - role为system，content为系统提示词', () => {
-            messages.push({ role: 'system', content: 'You are a helpful assistant.' });
+            messages.push(createMockAIMessage({ role: 'system', content: 'You are a helpful assistant.' }));
             assert.strictEqual(messages.length, 1);
             assert.strictEqual(messages[0].role, 'system');
         });
 
         it('消息顺序维护 - 按添加顺序存储消息', () => {
-            messages.push({ role: 'system', content: 'System prompt' });
-            messages.push({ role: 'user', content: 'User message' });
-            messages.push({ role: 'assistant', content: 'Assistant response' });
+            messages.push(createMockAIMessage({ role: 'system', content: 'System prompt' }));
+            messages.push(createMockAIMessage({ role: 'user', content: 'User message' }));
+            messages.push(createMockAIMessage({ role: 'assistant', content: 'Assistant response' }));
             
             assert.strictEqual(messages.length, 3);
             assert.strictEqual(messages[0].role, 'system');
@@ -68,7 +49,7 @@ describe('AI Module - AI对话模块测试', () => {
         });
 
         it('清空消息列表 - 将数组长度设为0', () => {
-            messages.push({ role: 'user', content: 'Test' });
+            messages.push(createMockAIMessage({ role: 'user', content: 'Test' }));
             messages.length = 0;
             
             assert.strictEqual(messages.length, 0);
@@ -77,7 +58,7 @@ describe('AI Module - AI对话模块测试', () => {
 
     describe('Model Configuration - 模型配置', () => {
         it('模型配置包含必要字段 - name、apiKey', () => {
-            const modelConfig: AIModelConfig = {
+            const modelConfig: MockAIModelConfig = {
                 name: 'qwen-turbo',
                 apiKey: 'test-key'
             };
@@ -87,7 +68,7 @@ describe('AI Module - AI对话模块测试', () => {
         });
 
         it('模型配置可选字段 - apiUrl', () => {
-            const modelConfig: AIModelConfig = {
+            const modelConfig: MockAIModelConfig = {
                 name: 'gpt-4',
                 apiKey: 'sk-test',
                 apiUrl: 'https://custom-api.example.com/v1/chat/completions'
@@ -97,38 +78,38 @@ describe('AI Module - AI对话模块测试', () => {
         });
 
         it('多模型配置 - 支持配置多个模型', () => {
-            const aiConfig: AIConfig = {
+            const aiConfig = createMockAIConfig({
                 models: [
                     { name: 'qwen-turbo', apiKey: 'qwen-key' },
                     { name: 'gpt-4', apiKey: 'openai-key' }
                 ]
-            };
+            });
             
-            assert.strictEqual(aiConfig.models.length, 2);
+            assert.strictEqual(aiConfig.models?.length, 2);
         });
 
         it('默认模型配置 - defaultModel指定默认模型', () => {
-            const aiConfig: AIConfig = {
+            const aiConfig = createMockAIConfig({
                 models: [
                     { name: 'qwen-turbo', apiKey: 'qwen-key' },
                     { name: 'gpt-4', apiKey: 'openai-key' }
                 ],
                 defaultModel: 'gpt-4'
-            };
+            });
             
             assert.strictEqual(aiConfig.defaultModel, 'gpt-4');
         });
 
         it('模型名称唯一性 - 不同模型使用不同名称', () => {
-            const aiConfig: AIConfig = {
+            const aiConfig = createMockAIConfig({
                 models: [
                     { name: 'qwen-turbo', apiKey: 'key1' },
                     { name: 'qwen-plus', apiKey: 'key2' },
                     { name: 'gpt-4', apiKey: 'key3' }
                 ]
-            };
+            });
             
-            const names = aiConfig.models.map(m => m.name);
+            const names = aiConfig.models?.map(m => m.name) || [];
             const uniqueNames = [...new Set(names)];
             
             assert.strictEqual(names.length, uniqueNames.length);
@@ -161,7 +142,7 @@ describe('AI Module - AI对话模块测试', () => {
 
     describe('Response Handling - 响应处理', () => {
         it('成功响应处理 - content非空，error为undefined', () => {
-            const response: AIResponse = {
+            const response: MockAIResponse = {
                 content: 'This is a test response from AI.'
             };
             
@@ -170,7 +151,7 @@ describe('AI Module - AI对话模块测试', () => {
         });
 
         it('错误响应处理 - content为空，error包含错误信息', () => {
-            const response: AIResponse = {
+            const response: MockAIResponse = {
                 content: '',
                 error: 'API key is invalid'
             };
@@ -180,7 +161,7 @@ describe('AI Module - AI对话模块测试', () => {
         });
 
         it('空响应处理 - content为空字符串', () => {
-            const response: AIResponse = {
+            const response: MockAIResponse = {
                 content: ''
             };
             
@@ -190,7 +171,7 @@ describe('AI Module - AI对话模块测试', () => {
 
     describe('API Configuration - API配置', () => {
         it('API密钥配置验证 - apiKey必须存在', () => {
-            const modelConfig: AIModelConfig = {
+            const modelConfig: MockAIModelConfig = {
                 name: 'qwen-turbo',
                 apiKey: 'test-api-key'
             };
@@ -216,7 +197,7 @@ describe('AI Module - AI对话模块测试', () => {
         });
 
         it('自定义API URL - 覆盖默认URL', () => {
-            const modelConfig: AIModelConfig = {
+            const modelConfig: MockAIModelConfig = {
                 name: 'gpt-4',
                 apiKey: 'sk-test',
                 apiUrl: 'https://custom-openai-proxy.com/v1/chat/completions'
@@ -281,20 +262,20 @@ describe('AI Module - AI对话模块测试', () => {
 
     describe('Conversation Context - 对话上下文', () => {
         it('维护对话历史 - 按顺序存储所有消息', () => {
-            const messages: AIMessage[] = [
-                { role: 'user', content: 'What is 2+2?' },
-                { role: 'assistant', content: '2+2 equals 4.' },
-                { role: 'user', content: 'What about 3+3?' },
-                { role: 'assistant', content: '3+3 equals 6.' }
+            const messages: MockAIMessage[] = [
+                createMockAIMessage({ role: 'user', content: 'What is 2+2?' }),
+                createMockAIMessage({ role: 'assistant', content: '2+2 equals 4.' }),
+                createMockAIMessage({ role: 'user', content: 'What about 3+3?' }),
+                createMockAIMessage({ role: 'assistant', content: '3+3 equals 6.' })
             ];
             
             assert.strictEqual(messages.length, 4);
         });
 
         it('系统消息包含在上下文中 - 第一条消息为system角色', () => {
-            const messages: AIMessage[] = [
-                { role: 'system', content: 'You are a math helper.' },
-                { role: 'user', content: 'What is 1+1?' }
+            const messages: MockAIMessage[] = [
+                createMockAIMessage({ role: 'system', content: 'You are a math helper.' }),
+                createMockAIMessage({ role: 'user', content: 'What is 1+1?' })
             ];
             
             assert.strictEqual(messages[0].role, 'system');
@@ -303,13 +284,11 @@ describe('AI Module - AI对话模块测试', () => {
 
     describe('ChatSession - 会话数据结构', () => {
         it('会话包含必要字段 - id、title、messages、时间戳', () => {
-            const session: ChatSession = {
+            const session = createMockChatSession({
                 id: 'session-123',
                 title: '测试会话',
-                messages: [],
-                createdAt: Date.now(),
-                updatedAt: Date.now()
-            };
+                messages: []
+            });
             
             assert.ok(session.id);
             assert.ok(session.title);
@@ -327,34 +306,24 @@ describe('AI Module - AI对话模块测试', () => {
         });
 
         it('会话消息数量统计 - 正确计算消息数量', () => {
-            const session: ChatSession = {
-                id: 'session-123',
-                title: '测试',
+            const session = createMockChatSession({
                 messages: [
-                    { role: 'user', content: 'Hello' },
-                    { role: 'assistant', content: 'Hi' },
-                    { role: 'user', content: 'How are you?' }
-                ],
-                createdAt: Date.now(),
-                updatedAt: Date.now()
-            };
+                    createMockAIMessage({ role: 'user', content: 'Hello' }),
+                    createMockAIMessage({ role: 'assistant', content: 'Hi' }),
+                    createMockAIMessage({ role: 'user', content: 'How are you?' })
+                ]
+            });
             
             assert.strictEqual(session.messages.length, 3);
         });
 
         it('会话时间戳更新 - 添加消息后更新updatedAt', async () => {
-            const session: ChatSession = {
-                id: 'session-123',
-                title: '测试',
-                messages: [],
-                createdAt: Date.now(),
-                updatedAt: Date.now()
-            };
+            const session = createMockChatSession({ messages: [] });
             
             const originalTime = session.updatedAt;
             await new Promise(r => setTimeout(r, 10));
             
-            session.messages.push({ role: 'user', content: 'Test' });
+            session.messages.push(createMockAIMessage({ role: 'user', content: 'Test' }));
             session.updatedAt = Date.now();
             
             assert.ok(session.updatedAt > originalTime);
@@ -363,23 +332,19 @@ describe('AI Module - AI对话模块测试', () => {
 
     describe('Session Management - 会话管理', () => {
         it('多会话管理 - 支持创建多个独立会话', () => {
-            const sessions: ChatSession[] = [];
+            const sessions: MockChatSession[] = [];
             
-            sessions.push({
+            sessions.push(createMockChatSession({
                 id: 'session-1',
                 title: '会话1',
-                messages: [{ role: 'user', content: 'Hello' }],
-                createdAt: Date.now(),
-                updatedAt: Date.now()
-            });
+                messages: [createMockAIMessage({ role: 'user', content: 'Hello' })]
+            }));
             
-            sessions.push({
+            sessions.push(createMockChatSession({
                 id: 'session-2',
                 title: '会话2',
-                messages: [{ role: 'user', content: 'Hi' }],
-                createdAt: Date.now(),
-                updatedAt: Date.now()
-            });
+                messages: [createMockAIMessage({ role: 'user', content: 'Hi' })]
+            }));
             
             assert.strictEqual(sessions.length, 2);
             assert.notStrictEqual(sessions[0].id, sessions[1].id);
@@ -394,9 +359,9 @@ describe('AI Module - AI对话模块测试', () => {
         });
 
         it('会话删除 - 从列表中移除会话', () => {
-            const sessions: ChatSession[] = [
-                { id: 'session-1', title: '会话1', messages: [], createdAt: 1, updatedAt: 1 },
-                { id: 'session-2', title: '会话2', messages: [], createdAt: 2, updatedAt: 2 }
+            const sessions: MockChatSession[] = [
+                createMockChatSession({ id: 'session-1', title: '会话1', createdAt: 1, updatedAt: 1 }),
+                createMockChatSession({ id: 'session-2', title: '会话2', createdAt: 2, updatedAt: 2 })
             ];
             
             const index = sessions.findIndex(s => s.id === 'session-1');
@@ -407,10 +372,10 @@ describe('AI Module - AI对话模块测试', () => {
         });
 
         it('会话排序 - 按更新时间降序排列', () => {
-            const sessions: ChatSession[] = [
-                { id: 'session-1', title: '会话1', messages: [], createdAt: 1, updatedAt: 100 },
-                { id: 'session-2', title: '会话2', messages: [], createdAt: 2, updatedAt: 200 },
-                { id: 'session-3', title: '会话3', messages: [], createdAt: 3, updatedAt: 50 }
+            const sessions: MockChatSession[] = [
+                createMockChatSession({ id: 'session-1', updatedAt: 100 }),
+                createMockChatSession({ id: 'session-2', updatedAt: 200 }),
+                createMockChatSession({ id: 'session-3', updatedAt: 50 })
             ];
             
             sessions.sort((a, b) => b.updatedAt - a.updatedAt);
@@ -431,26 +396,26 @@ describe('AI Module - AI对话模块测试', () => {
         });
 
         it('获取可用模型列表 - 返回所有配置的模型', () => {
-            const aiConfig: AIConfig = {
+            const aiConfig = createMockAIConfig({
                 models: [
                     { name: 'qwen-turbo', apiKey: 'key1' },
                     { name: 'gpt-4', apiKey: 'key2' }
                 ]
-            };
+            });
             
-            assert.strictEqual(aiConfig.models.length, 2);
+            assert.strictEqual(aiConfig.models?.length, 2);
         });
 
         it('模型配置验证 - 切换前验证模型存在', () => {
-            const aiConfig: AIConfig = {
+            const aiConfig = createMockAIConfig({
                 models: [
                     { name: 'qwen-turbo', apiKey: 'key1' },
                     { name: 'gpt-4', apiKey: 'key2' }
                 ]
-            };
+            });
             
             const targetModel = 'gpt-4';
-            const exists = aiConfig.models.some(m => m.name === targetModel);
+            const exists = aiConfig.models?.some(m => m.name === targetModel);
             
             assert.ok(exists);
         });

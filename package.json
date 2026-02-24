@@ -213,7 +213,10 @@
     "package": "webpack --mode production",
     "webpack-dev": "webpack --mode development",
     "test": "npm run compile && npm run compile:test && node ./out/test/runTest.js",
-    "test:unit": "mocha --require ts-node/register 'test/suite/*.test.ts'"
+    "test:unit": "mocha --require ts-node/register 'test/suite/*.test.ts'",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",
@@ -222,10 +225,14 @@
     "@types/ssh2-sftp-client": "^9.0.6",
     "@types/vscode": "^1.85.0",
     "@vscode/test-electron": "^2.3.8",
+    "mermaid": "^11.12.3",
     "mocha": "^10.2.0",
     "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-mermaid": "^2.0.17",
+    "vue": "^3.5.28",
     "webpack": "^5.105.2",
     "webpack-cli": "^6.0.1"
   },

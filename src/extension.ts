@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { loadConfig, reloadConfig, setupConfigWatcher, onConfigChanged, dispose as disposeConfig } from './config';
-import { CommandExecutor, FileUploader } from './core';
+import { loadConfig, setupConfigWatcher, onConfigChanged, dispose as disposeConfig } from './config';
+import { CommandExecutor, FileUploader, CommandRegistry } from './core';
 import { ConnectionPool } from './core/connectionPool';
 import { AIChat, SessionManager } from './ai';
-import { LogTreeView, LogTreeItem, AIChatViewProvider, ChangesTreeView, ChangeTreeItem, QuickCommandsTreeView, QuickCommandItem } from './views';
+import { LogTreeView, AIChatViewProvider, ChangesTreeView, QuickCommandsTreeView } from './views';
 
 let commandExecutor: CommandExecutor;
 let fileUploader: FileUploader;
@@ -12,179 +12,94 @@ let sessionManager: SessionManager;
 let logTreeView: LogTreeView;
 let changesTreeView: ChangesTreeView;
 let quickCommandsTreeView: QuickCommandsTreeView;
+let commandRegistry: CommandRegistry;
 
-export function activate(context: vscode.ExtensionContext) {
+/**
+ * RemoteTest 插件激活函数
+ * 
+ * 初始化所有核心组件和视图，注册命令和事件监听器
+ */
+export function activate(context: vscode.ExtensionContext): void {
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     
-    if (workspacePath) {
-        loadConfig(workspacePath);
-    }
-
-    commandExecutor = new CommandExecutor();
+    initializeConfig(workspacePath);
     
-    fileUploader = new FileUploader(commandExecutor);
-    sessionManager = new SessionManager(context);
-    aiChat = new AIChat(sessionManager);
-    logTreeView = new LogTreeView();
-    changesTreeView = new ChangesTreeView(fileUploader);
-    quickCommandsTreeView = new QuickCommandsTreeView();
-
-    fileUploader.setOnTestCaseComplete(() => {
-        logTreeView.refresh();
-    });
-
-    setupConfigWatcher(context);
-
-    onConfigChanged((newConfig) => {
-        if (logTreeView) {
-            logTreeView.refresh();
-        }
-        if (changesTreeView) {
-            changesTreeView.refresh();
-        }
-        if (quickCommandsTreeView) {
-            quickCommandsTreeView.refresh();
-        }
-    });
-
-    const commands = [
-        vscode.commands.registerCommand('RemoteTest.runTestCase', async (uri: vscode.Uri) => {
-            try {
-                if (!uri) {
-                    const activeEditor = vscode.window.activeTextEditor;
-                    if (activeEditor) {
-                        uri = activeEditor.document.uri;
-                    } else {
-                        vscode.window.showWarningMessage('请先选择一个文件或目录');
-                        return;
-                    }
-                }
-                await fileUploader.runTestCase(uri.fsPath);
-            } catch (error: any) {
-                vscode.window.showErrorMessage(`运行用例失败: ${error.message}`);
-            }
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.uploadFile', async (uri: vscode.Uri) => {
-            try {
-                if (!uri) {
-                    const activeEditor = vscode.window.activeTextEditor;
-                    if (activeEditor) {
-                        uri = activeEditor.document.uri;
-                    } else {
-                        vscode.window.showWarningMessage('请先选择一个文件或目录');
-                        return;
-                    }
-                }
-                await fileUploader.uploadFile(uri.fsPath);
-            } catch (error: any) {
-                vscode.window.showErrorMessage(`上传失败: ${error.message}`);
-            }
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.syncFile', async (uri: vscode.Uri) => {
-            try {
-                if (!uri) {
-                    const activeEditor = vscode.window.activeTextEditor;
-                    if (activeEditor) {
-                        uri = activeEditor.document.uri;
-                    } else {
-                        vscode.window.showWarningMessage('请先选择一个文件或目录');
-                        return;
-                    }
-                }
-                await fileUploader.syncFile(uri.fsPath);
-            } catch (error: any) {
-                vscode.window.showErrorMessage(`同步失败: ${error.message}`);
-            }
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.refreshLogs', async () => {
-            logTreeView.refresh();
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.downloadLog', async (item: LogTreeItem) => {
-            await logTreeView.downloadLog(item);
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.openLog', async (item: LogTreeItem) => {
-            await logTreeView.openLogInEditor(item);
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.reloadConfig', () => {
-            const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            if (wsPath) {
-                reloadConfig(wsPath);
-                vscode.window.showInformationMessage('RemoteTest 配置已刷新');
-            } else {
-                vscode.window.showWarningMessage('无法刷新配置：未找到工作区');
-            }
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.openConfig', async () => {
-            const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            if (wsPath) {
-                const configPath = vscode.workspace.getConfiguration('RemoteTest').get<string>('configPath') || 'RemoteTest-config.json';
-                const pathsToTry = [
-                    vscode.Uri.file(`${wsPath}/.vscode/${configPath}`),
-                    vscode.Uri.file(`${wsPath}/${configPath}`)
-                ];
-                
-                for (const uri of pathsToTry) {
-                    try {
-                        await vscode.workspace.fs.stat(uri);
-                        const doc = await vscode.workspace.openTextDocument(uri);
-                        await vscode.window.showTextDocument(doc);
-                        return;
-                    } catch {
-                        continue;
-                    }
-                }
-                
-                vscode.window.showWarningMessage('未找到配置文件，将在首次使用时自动创建');
-            } else {
-                vscode.window.showWarningMessage('无法打开配置文件：未找到工作区');
-            }
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.refreshChanges', async () => {
-            changesTreeView.refresh();
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.uploadProjectChanges', async (item: ChangeTreeItem) => {
-            await changesTreeView.uploadProjectChanges(item);
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.uploadSelectedChange', async (item: ChangeTreeItem) => {
-            await changesTreeView.uploadSelectedChange(item);
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.openChangeFile', async (item: ChangeTreeItem) => {
-            await changesTreeView.openChangeFile(item);
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.refreshQuickCommands', async () => {
-            quickCommandsTreeView.refresh();
-        }),
-
-        vscode.commands.registerCommand('RemoteTest.executeQuickCommand', async (item: QuickCommandItem) => {
-            await quickCommandsTreeView.executeQuickCommand(item);
-        })
-    ];
-
+    const components = initializeComponents(context);
+    ({ commandExecutor, fileUploader, aiChat, sessionManager, 
+       logTreeView, changesTreeView, quickCommandsTreeView } = components);
+    
+    setupComponentListeners(components, context);
+    
+    commandRegistry = new CommandRegistry(
+        context, fileUploader, logTreeView, changesTreeView, quickCommandsTreeView
+    );
+    const registeredCommands = commandRegistry.registerAllCommands();
+    
+    const aiChatViewProvider = new AIChatViewProvider(context, aiChat, sessionManager);
     const aiChatView = vscode.window.registerWebviewViewProvider(
         AIChatViewProvider.viewType, 
-        new AIChatViewProvider(context.extensionUri, aiChat, sessionManager)
+        aiChatViewProvider
     );
-
-    context.subscriptions.push(...commands, aiChatView);
-
+    
+    context.subscriptions.push(...registeredCommands, aiChatView);
+    
     logTreeView.start();
-
     vscode.window.showInformationMessage('RemoteTest 插件已启动');
 }
 
-export function deactivate() {
+/**
+ * 初始化配置
+ */
+function initializeConfig(workspacePath?: string): void {
+    if (workspacePath) {
+        loadConfig(workspacePath);
+    }
+}
+
+/**
+ * 初始化所有核心组件
+ */
+function initializeComponents(context: vscode.ExtensionContext) {
+    const commandExecutor = new CommandExecutor();
+    const sessionManager = new SessionManager(context);
+    const fileUploader = new FileUploader(commandExecutor);
+    
+    return {
+        commandExecutor,
+        fileUploader,
+        sessionManager,
+        aiChat: new AIChat(sessionManager),
+        logTreeView: new LogTreeView(),
+        changesTreeView: new ChangesTreeView(fileUploader),
+        quickCommandsTreeView: new QuickCommandsTreeView()
+    };
+}
+
+/**
+ * 设置组件间的事件监听器
+ */
+function setupComponentListeners(components: any, context: vscode.ExtensionContext): void {
+    const { fileUploader, logTreeView, changesTreeView, quickCommandsTreeView } = components;
+    
+    fileUploader.setOnTestCaseComplete(() => {
+        logTreeView.refresh();
+    });
+    
+    setupConfigWatcher(context);
+    
+    onConfigChanged(() => {
+        logTreeView.refresh();
+        changesTreeView.refresh();
+        quickCommandsTreeView.refresh();
+    });
+}
+
+/**
+ * RemoteTest 插件停用函数
+ * 
+ * 清理所有资源，停止运行中的服务
+ */
+export function deactivate(): void {
     if (logTreeView) {
         logTreeView.stop();
     }
@@ -194,6 +109,10 @@ export function deactivate() {
     if (sessionManager) {
         sessionManager.dispose();
     }
+    if (commandRegistry) {
+        commandRegistry.dispose();
+    }
     ConnectionPool.getInstance().destroy();
     disposeConfig();
 }
+

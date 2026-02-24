@@ -1,46 +1,31 @@
 import * as assert from 'assert';
 import { describe, it } from 'mocha';
+import {
+    MockServerConfig,
+    MockCommandConfig,
+    MockProjectConfig,
+    MockLogDirectoryConfig,
+    MockLogsConfig,
+    createMockServerConfig,
+    createMockProjectConfig
+} from '../helpers';
 
-interface ServerConfig {
-    host: string;
-    port: number;
-    username: string;
-    password: string;
-    privateKeyPath: string;
-    remoteDirectory: string;
+interface ProjectConfigWithLogs extends MockProjectConfig {
+    logs: MockLogsConfig;
 }
 
-interface CommandConfig {
+interface CommandConfigWithFilter {
     name: string;
     executeCommand: string;
     filterPatterns: string[];
     filterMode: 'include' | 'exclude';
 }
 
-interface LogDirectoryConfig {
-    name: string;
-    path: string;
-}
-
-interface ProjectLogsConfig {
-    directories: LogDirectoryConfig[];
-    downloadPath: string;
-}
-
-interface ProjectConfig {
-    name: string;
-    localPath: string;
-    enabled: boolean;
-    server: ServerConfig;
-    commands: CommandConfig[];
-    logs?: ProjectLogsConfig;
-}
-
-function getEnabledProjects(projects: ProjectConfig[]): ProjectConfig[] {
+function getEnabledProjects(projects: ProjectConfigWithLogs[]): ProjectConfigWithLogs[] {
     return projects.filter(p => p.enabled !== false);
 }
 
-function getProjectForDirectory(dir: LogDirectoryConfig, projects: ProjectConfig[]): ProjectConfig | null {
+function getProjectForDirectory(dir: MockLogDirectoryConfig, projects: ProjectConfigWithLogs[]): ProjectConfigWithLogs | null {
     for (const project of projects) {
         if (project.logs?.directories) {
             const found = project.logs.directories.find(d => d.path === dir.path);
@@ -53,20 +38,17 @@ function getProjectForDirectory(dir: LogDirectoryConfig, projects: ProjectConfig
 }
 
 describe('Log Monitor Directory Project Association - 日志目录项目关联测试', () => {
-    const projects: ProjectConfig[] = [
+    const projects: ProjectConfigWithLogs[] = [
         {
             name: '项目A',
             localPath: 'D:\\projectA',
             enabled: true,
-            server: { 
-                host: '192.168.1.100', 
-                port: 22, 
-                username: 'root', 
-                password: '', 
-                privateKeyPath: '', 
-                remoteDirectory: '/tmp/projectA' 
-            },
-            commands: [{ name: '测试', executeCommand: 'pytest', filterPatterns: [], filterMode: 'include' }],
+            server: createMockServerConfig({
+                host: '192.168.1.100',
+                username: 'root',
+                remoteDirectory: '/tmp/projectA'
+            }),
+            commands: [{ name: '测试', executeCommand: 'pytest', includePatterns: [], excludePatterns: [] }],
             logs: {
                 directories: [
                     { name: '应用日志', path: '/var/log/projectA/app' },
@@ -79,15 +61,12 @@ describe('Log Monitor Directory Project Association - 日志目录项目关联�
             name: '项目B',
             localPath: 'D:\\projectB',
             enabled: true,
-            server: { 
-                host: '192.168.1.200', 
-                port: 22, 
-                username: 'test', 
-                password: '', 
-                privateKeyPath: '', 
-                remoteDirectory: '/tmp/projectB' 
-            },
-            commands: [{ name: '测试', executeCommand: 'python', filterPatterns: [], filterMode: 'include' }],
+            server: createMockServerConfig({
+                host: '192.168.1.200',
+                username: 'test',
+                remoteDirectory: '/tmp/projectB'
+            }),
+            commands: [{ name: '测试', executeCommand: 'python', includePatterns: [], excludePatterns: [] }],
             logs: {
                 directories: [
                     { name: '应用日志', path: '/var/log/projectB/app' }
@@ -99,7 +78,7 @@ describe('Log Monitor Directory Project Association - 日志目录项目关联�
 
     describe('Directory Project Association - 目录项目关联', () => {
         it('验证日志目录通过路径关联项目', () => {
-            const dir: LogDirectoryConfig = {
+            const dir: MockLogDirectoryConfig = {
                 name: '应用日志',
                 path: '/var/log/projectA/app'
             };
@@ -112,7 +91,7 @@ describe('Log Monitor Directory Project Association - 日志目录项目关联�
         });
 
         it('验证不存在的目录返回null', () => {
-            const dir: LogDirectoryConfig = {
+            const dir: MockLogDirectoryConfig = {
                 name: '公共日志',
                 path: '/var/log/common'
             };
@@ -123,7 +102,7 @@ describe('Log Monitor Directory Project Association - 日志目录项目关联�
         });
 
         it('验证projectName不匹配时返回null', () => {
-            const dir: LogDirectoryConfig = {
+            const dir: MockLogDirectoryConfig = {
                 name: '未知日志',
                 path: '/var/log/unknown'
             };
@@ -150,7 +129,7 @@ describe('Log Monitor Directory Project Association - 日志目录项目关联�
 
     describe('Server Config Resolution - 服务器配置解析', () => {
         it('验证关联项目后使用正确的服务器配置', () => {
-            const dir: LogDirectoryConfig = {
+            const dir: MockLogDirectoryConfig = {
                 name: '应用日志',
                 path: '/var/log/projectA/app'
             };
@@ -162,11 +141,11 @@ describe('Log Monitor Directory Project Association - 日志目录项目关联�
         });
 
         it('验证不同项目使用不同服务器', () => {
-            const dirA: LogDirectoryConfig = {
+            const dirA: MockLogDirectoryConfig = {
                 name: '项目A日志',
                 path: '/var/log/projectA/app'
             };
-            const dirB: LogDirectoryConfig = {
+            const dirB: MockLogDirectoryConfig = {
                 name: '项目B日志',
                 path: '/var/log/projectB/app'
             };
@@ -182,7 +161,7 @@ describe('Log Monitor Directory Project Association - 日志目录项目关联�
 
     describe('Download Path Resolution - 下载路径解析', () => {
         it('验证使用项目级下载路径', () => {
-            const dir: LogDirectoryConfig = {
+            const dir: MockLogDirectoryConfig = {
                 name: '项目A日志',
                 path: '/var/log/projectA/app'
             };
@@ -193,11 +172,11 @@ describe('Log Monitor Directory Project Association - 日志目录项目关联�
         });
 
         it('验证不同项目使用不同下载路径', () => {
-            const dirA: LogDirectoryConfig = {
+            const dirA: MockLogDirectoryConfig = {
                 name: '项目A日志',
                 path: '/var/log/projectA/app'
             };
-            const dirB: LogDirectoryConfig = {
+            const dirB: MockLogDirectoryConfig = {
                 name: '项目B日志',
                 path: '/var/log/projectB/app'
             };
@@ -220,21 +199,22 @@ describe('Log Monitor Directory Project Association - 日志目录项目关联�
         });
 
         it('验证禁用项目不在列表中', () => {
-            const allProjects: ProjectConfig[] = [
+            const allProjects: ProjectConfigWithLogs[] = [
                 ...projects,
                 {
                     name: '禁用项目',
                     localPath: 'D:\\disabled',
                     enabled: false,
-                    server: { 
-                        host: '192.168.1.300', 
-                        port: 22, 
-                        username: 'disabled', 
-                        password: '', 
-                        privateKeyPath: '', 
-                        remoteDirectory: '/tmp/disabled' 
-                    },
-                    commands: []
+                    server: createMockServerConfig({
+                        host: '192.168.1.300',
+                        username: 'disabled',
+                        remoteDirectory: '/tmp/disabled'
+                    }),
+                    commands: [],
+                    logs: {
+                        directories: [],
+                        downloadPath: ''
+                    }
                 }
             ];
             
@@ -245,20 +225,17 @@ describe('Log Monitor Directory Project Association - 日志目录项目关联�
         });
 
         it('验证禁用项目的日志目录无法关联', () => {
-            const allProjects: ProjectConfig[] = [
+            const allProjects: ProjectConfigWithLogs[] = [
                 ...projects,
                 {
                     name: '禁用项目',
                     localPath: 'D:\\disabled',
                     enabled: false,
-                    server: { 
-                        host: '192.168.1.300', 
-                        port: 22, 
-                        username: 'disabled', 
-                        password: '', 
-                        privateKeyPath: '', 
-                        remoteDirectory: '/tmp/disabled' 
-                    },
+                    server: createMockServerConfig({
+                        host: '192.168.1.300',
+                        username: 'disabled',
+                        remoteDirectory: '/tmp/disabled'
+                    }),
                     commands: [],
                     logs: {
                         directories: [{ name: '禁用项目日志', path: '/var/log/disabled' }],
@@ -267,7 +244,7 @@ describe('Log Monitor Directory Project Association - 日志目录项目关联�
                 }
             ];
             
-            const dir: LogDirectoryConfig = {
+            const dir: MockLogDirectoryConfig = {
                 name: '禁用项目日志',
                 path: '/var/log/disabled'
             };

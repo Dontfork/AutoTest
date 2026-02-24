@@ -1,64 +1,33 @@
 import * as assert from 'assert';
 import { describe, it } from 'mocha';
 import * as path from 'path';
+import {
+    MockServerConfig,
+    MockCommandConfig,
+    MockProjectConfig,
+    MockAIConfig,
+    MockRemoteTestConfig,
+    createMockServerConfig,
+    createMockProjectConfig,
+    createMockAIConfig,
+    createMockRemoteTestConfig,
+    normalizePath
+} from '../helpers';
 
-interface ServerConfig {
-    host: string;
-    port: number;
-    username: string;
-    password: string;
-    privateKeyPath: string;
-    remoteDirectory: string;
+interface ProjectConfigWithFilter extends MockProjectConfig {
+    commands: MockCommandConfigWithFilter[];
 }
 
-interface CommandConfig {
+interface MockCommandConfigWithFilter {
     name: string;
     executeCommand: string;
     filterPatterns: string[];
     filterMode: 'include' | 'exclude';
 }
 
-interface ProjectLogsConfig {
-    directories: { name: string; path: string; }[];
-    downloadPath: string;
-}
-
-interface ProjectConfig {
-    name: string;
-    localPath: string;
-    enabled: boolean;
-    server: ServerConfig;
-    commands: CommandConfig[];
-    logs?: ProjectLogsConfig;
-}
-
-interface AIConfig {
-    provider: 'qwen' | 'openai';
-    qwen: {
-        apiKey: string;
-        apiUrl: string;
-        model: string;
-    };
-    openai: {
-        apiKey: string;
-        apiUrl: string;
-        model: string;
-    };
-}
-
-interface RemoteTestConfig {
-    projects: ProjectConfig[];
-    ai: AIConfig;
-    refreshInterval?: number;
-}
-
-function normalizePath(p: string): string {
-    return p.replace(/\\/g, '/').toLowerCase();
-}
-
-function checkPathConflict(projects: ProjectConfig[]): { hasConflict: boolean; conflicts: string[] } {
+function checkPathConflict(projects: ProjectConfigWithFilter[]): { hasConflict: boolean; conflicts: string[] } {
     const conflicts: string[] = [];
-    const enabledProjects: ProjectConfig[] = [];
+    const enabledProjects: ProjectConfigWithFilter[] = [];
     
     for (const project of projects) {
         if (!project.localPath) {
@@ -68,7 +37,7 @@ function checkPathConflict(projects: ProjectConfig[]): { hasConflict: boolean; c
         const normalizedPath = normalizePath(project.localPath);
         
         for (const existing of enabledProjects) {
-            const existingPath = normalizePath(existing.localPath);
+            const existingPath = normalizePath(existing.localPath!);
             
             if (normalizedPath.startsWith(existingPath + '/') || 
                 existingPath.startsWith(normalizedPath + '/')) {
@@ -86,12 +55,12 @@ function checkPathConflict(projects: ProjectConfig[]): { hasConflict: boolean; c
     return { hasConflict: conflicts.length > 0, conflicts };
 }
 
-function matchProject(localFilePath: string, projects: ProjectConfig[]): ProjectConfig | null {
+function matchProject(localFilePath: string, projects: ProjectConfigWithFilter[]): ProjectConfigWithFilter | null {
     const normalizedFilePath = normalizePath(localFilePath);
     
     const enabledProjects = projects.filter(p => p.enabled !== false);
     
-    let bestMatch: ProjectConfig | null = null;
+    let bestMatch: ProjectConfigWithFilter | null = null;
     let bestMatchLength = 0;
     
     for (const project of enabledProjects) {
@@ -116,27 +85,23 @@ function matchProject(localFilePath: string, projects: ProjectConfig[]): Project
 describe('Multi-Project Configuration - 多工程配置测试', () => {
     describe('ProjectConfig - 工程配置接口', () => {
         it('验证ProjectConfig接口包含所有必需属性', () => {
-            const project: ProjectConfig = {
+            const project = createMockProjectConfig({
                 name: '项目A',
                 localPath: 'D:\\projectA',
                 enabled: true,
-                server: {
+                server: createMockServerConfig({
                     host: '192.168.1.100',
-                    port: 22,
-                    username: 'root',
-                    password: '',
-                    privateKeyPath: '',
                     remoteDirectory: '/tmp/projectA'
-                },
+                }),
                 commands: [
                     {
                         name: '运行测试',
                         executeCommand: 'pytest {filePath} -v',
-                        filterPatterns: ['ERROR', 'FAILED'],
-                        filterMode: 'include'
+                        includePatterns: ['ERROR', 'FAILED'],
+                        excludePatterns: []
                     }
                 ]
-            };
+            });
             
             assert.strictEqual(project.name, '项目A');
             assert.strictEqual(project.localPath, 'D:\\projectA');
@@ -146,94 +111,40 @@ describe('Multi-Project Configuration - 多工程配置测试', () => {
         });
 
         it('验证多命令配置 - 支持多个命令选择', () => {
-            const project: ProjectConfig = {
+            const project = createMockProjectConfig({
                 name: '项目B',
                 localPath: '/home/user/projectB',
-                enabled: true,
-                server: {
-                    host: '192.168.1.200',
-                    port: 22,
-                    username: 'test',
-                    password: 'password',
-                    privateKeyPath: '',
-                    remoteDirectory: '/home/test/projectB'
-                },
                 commands: [
-                    {
-                        name: '运行测试',
-                        executeCommand: 'pytest {filePath} -v',
-                        filterPatterns: ['ERROR'],
-                        filterMode: 'include'
-                    },
-                    {
-                        name: '运行覆盖率',
-                        executeCommand: 'pytest {filePath} --cov',
-                        filterPatterns: ['ERROR'],
-                        filterMode: 'include'
-                    }
+                    { name: '运行测试', executeCommand: 'pytest {filePath} -v', includePatterns: ['ERROR'], excludePatterns: [] },
+                    { name: '运行覆盖率', executeCommand: 'pytest {filePath} --cov', includePatterns: ['ERROR'], excludePatterns: [] }
                 ]
-            };
+            });
             
-            assert.strictEqual(project.commands.length, 2);
-            assert.strictEqual(project.commands[0].name, '运行测试');
-            assert.strictEqual(project.commands[1].name, '运行覆盖率');
+            assert.strictEqual(project.commands?.length, 2);
+            assert.strictEqual(project.commands![0].name, '运行测试');
+            assert.strictEqual(project.commands![1].name, '运行覆盖率');
         });
     });
 
     describe('RemoteTestConfig - 多工程配置结构', () => {
         it('验证多工程配置结构 - 包含projects数组', () => {
-            const config: RemoteTestConfig = {
+            const config = createMockRemoteTestConfig({
                 projects: [
-                    {
+                    createMockProjectConfig({
                         name: '项目A',
                         localPath: 'D:\\projectA',
-                        enabled: true,
-                        server: {
-                            host: '192.168.1.100',
-                            port: 22,
-                            username: 'root',
-                            password: '',
-                            privateKeyPath: '',
-                            remoteDirectory: '/tmp/projectA'
-                        },
-                        commands: [
-                            {
-                                name: '运行测试',
-                                executeCommand: 'pytest {filePath}',
-                                filterPatterns: [],
-                                filterMode: 'include'
-                            }
-                        ]
-                    },
-                    {
+                        server: createMockServerConfig({ host: '192.168.1.100', remoteDirectory: '/tmp/projectA' }),
+                        commands: [{ name: '运行测试', executeCommand: 'pytest {filePath}', includePatterns: [], excludePatterns: [] }]
+                    }),
+                    createMockProjectConfig({
                         name: '项目B',
                         localPath: 'D:\\projectB',
-                        enabled: true,
-                        server: {
-                            host: '192.168.1.200',
-                            port: 22,
-                            username: 'test',
-                            password: '',
-                            privateKeyPath: '',
-                            remoteDirectory: '/tmp/projectB'
-                        },
-                        commands: [
-                            {
-                                name: '执行用例',
-                                executeCommand: 'python {filePath}',
-                                filterPatterns: [],
-                                filterMode: 'include'
-                            }
-                        ]
-                    }
+                        server: createMockServerConfig({ host: '192.168.1.200', remoteDirectory: '/tmp/projectB' }),
+                        commands: [{ name: '执行用例', executeCommand: 'python {filePath}', includePatterns: [], excludePatterns: [] }]
+                    })
                 ],
-                ai: {
-                    provider: 'qwen',
-                    qwen: { apiKey: '', apiUrl: '', model: 'qwen-turbo' },
-                    openai: { apiKey: '', apiUrl: '', model: 'gpt-3.5-turbo' }
-                },
                 refreshInterval: 5000
-            };
+            });
             
             assert.ok(Array.isArray(config.projects));
             assert.strictEqual(config.projects.length, 2);
@@ -261,19 +172,19 @@ describe('Multi-Project Configuration - 多工程配置测试', () => {
     });
 
     describe('Path Matching - 路径匹配', () => {
-        const projects: ProjectConfig[] = [
+        const projects: ProjectConfigWithFilter[] = [
             {
                 name: '项目A',
                 localPath: 'D:\\projectA',
                 enabled: true,
-                server: { host: '192.168.1.100', port: 22, username: 'root', password: '', privateKeyPath: '', remoteDirectory: '/tmp/projectA' },
+                server: createMockServerConfig({ host: '192.168.1.100', remoteDirectory: '/tmp/projectA' }),
                 commands: [{ name: '测试', executeCommand: 'pytest', filterPatterns: [], filterMode: 'include' }]
             },
             {
                 name: '项目B',
                 localPath: 'D:\\projectB',
                 enabled: true,
-                server: { host: '192.168.1.200', port: 22, username: 'test', password: '', privateKeyPath: '', remoteDirectory: '/tmp/projectB' },
+                server: createMockServerConfig({ host: '192.168.1.200', remoteDirectory: '/tmp/projectB' }),
                 commands: [{ name: '测试', executeCommand: 'python', filterPatterns: [], filterMode: 'include' }]
             }
         ];
@@ -302,19 +213,19 @@ describe('Multi-Project Configuration - 多工程配置测试', () => {
         });
 
         it('验证最长路径匹配 - 嵌套路径选择更精确的匹配', () => {
-            const nestedProjects: ProjectConfig[] = [
+            const nestedProjects: ProjectConfigWithFilter[] = [
                 {
                     name: '父项目',
                     localPath: 'D:\\project',
                     enabled: true,
-                    server: { host: '192.168.1.100', port: 22, username: 'root', password: '', privateKeyPath: '', remoteDirectory: '/tmp/project' },
+                    server: createMockServerConfig({ remoteDirectory: '/tmp/project' }),
                     commands: [{ name: '测试', executeCommand: 'pytest', filterPatterns: [], filterMode: 'include' }]
                 },
                 {
                     name: '子项目',
                     localPath: 'D:\\project\\subproject',
                     enabled: true,
-                    server: { host: '192.168.1.200', port: 22, username: 'test', password: '', privateKeyPath: '', remoteDirectory: '/tmp/subproject' },
+                    server: createMockServerConfig({ host: '192.168.1.200', remoteDirectory: '/tmp/subproject' }),
                     commands: [{ name: '测试', executeCommand: 'python', filterPatterns: [], filterMode: 'include' }]
                 }
             ];
@@ -327,19 +238,19 @@ describe('Multi-Project Configuration - 多工程配置测试', () => {
         });
 
         it('验证禁用工程不参与匹配', () => {
-            const disabledProjects: ProjectConfig[] = [
+            const disabledProjects: ProjectConfigWithFilter[] = [
                 {
                     name: '禁用项目',
                     localPath: 'D:\\projectA',
                     enabled: false,
-                    server: { host: '192.168.1.100', port: 22, username: 'root', password: '', privateKeyPath: '', remoteDirectory: '/tmp/projectA' },
+                    server: createMockServerConfig({ remoteDirectory: '/tmp/projectA' }),
                     commands: [{ name: '测试', executeCommand: 'pytest', filterPatterns: [], filterMode: 'include' }]
                 },
                 {
                     name: '启用项目',
                     localPath: 'D:\\projectB',
                     enabled: true,
-                    server: { host: '192.168.1.200', port: 22, username: 'test', password: '', privateKeyPath: '', remoteDirectory: '/tmp/projectB' },
+                    server: createMockServerConfig({ host: '192.168.1.200', remoteDirectory: '/tmp/projectB' }),
                     commands: [{ name: '测试', executeCommand: 'python', filterPatterns: [], filterMode: 'include' }]
                 }
             ];
@@ -353,19 +264,19 @@ describe('Multi-Project Configuration - 多工程配置测试', () => {
 
     describe('Path Conflict Detection - 路径冲突检测', () => {
         it('验证无冲突配置 - 独立路径', () => {
-            const projects: ProjectConfig[] = [
+            const projects: ProjectConfigWithFilter[] = [
                 {
                     name: '项目A',
                     localPath: 'D:\\projectA',
                     enabled: true,
-                    server: { host: '192.168.1.100', port: 22, username: 'root', password: '', privateKeyPath: '', remoteDirectory: '/tmp/projectA' },
+                    server: createMockServerConfig({ remoteDirectory: '/tmp/projectA' }),
                     commands: []
                 },
                 {
                     name: '项目B',
                     localPath: 'D:\\projectB',
                     enabled: true,
-                    server: { host: '192.168.1.200', port: 22, username: 'test', password: '', privateKeyPath: '', remoteDirectory: '/tmp/projectB' },
+                    server: createMockServerConfig({ host: '192.168.1.200', remoteDirectory: '/tmp/projectB' }),
                     commands: []
                 }
             ];
@@ -377,19 +288,19 @@ describe('Multi-Project Configuration - 多工程配置测试', () => {
         });
 
         it('验证冲突检测 - 包含关系路径', () => {
-            const projects: ProjectConfig[] = [
+            const projects: ProjectConfigWithFilter[] = [
                 {
                     name: '父项目',
                     localPath: 'D:\\project',
                     enabled: true,
-                    server: { host: '192.168.1.100', port: 22, username: 'root', password: '', privateKeyPath: '', remoteDirectory: '/tmp/project' },
+                    server: createMockServerConfig({ remoteDirectory: '/tmp/project' }),
                     commands: []
                 },
                 {
                     name: '子项目',
                     localPath: 'D:\\project\\subproject',
                     enabled: true,
-                    server: { host: '192.168.1.200', port: 22, username: 'test', password: '', privateKeyPath: '', remoteDirectory: '/tmp/subproject' },
+                    server: createMockServerConfig({ host: '192.168.1.200', remoteDirectory: '/tmp/subproject' }),
                     commands: []
                 }
             ];
@@ -402,19 +313,19 @@ describe('Multi-Project Configuration - 多工程配置测试', () => {
         });
 
         it('验证冲突自动禁用 - 子项目被禁用', () => {
-            const projects: ProjectConfig[] = [
+            const projects: ProjectConfigWithFilter[] = [
                 {
                     name: '父项目',
                     localPath: 'D:\\project',
                     enabled: true,
-                    server: { host: '192.168.1.100', port: 22, username: 'root', password: '', privateKeyPath: '', remoteDirectory: '/tmp/project' },
+                    server: createMockServerConfig({ remoteDirectory: '/tmp/project' }),
                     commands: []
                 },
                 {
                     name: '子项目',
                     localPath: 'D:\\project\\subproject',
                     enabled: true,
-                    server: { host: '192.168.1.200', port: 22, username: 'test', password: '', privateKeyPath: '', remoteDirectory: '/tmp/subproject' },
+                    server: createMockServerConfig({ host: '192.168.1.200', remoteDirectory: '/tmp/subproject' }),
                     commands: []
                 }
             ];
@@ -426,19 +337,19 @@ describe('Multi-Project Configuration - 多工程配置测试', () => {
         });
 
         it('验证POSIX路径冲突检测', () => {
-            const projects: ProjectConfig[] = [
+            const projects: ProjectConfigWithFilter[] = [
                 {
                     name: '父项目',
                     localPath: '/home/user/project',
                     enabled: true,
-                    server: { host: '192.168.1.100', port: 22, username: 'root', password: '', privateKeyPath: '', remoteDirectory: '/tmp/project' },
+                    server: createMockServerConfig({ remoteDirectory: '/tmp/project' }),
                     commands: []
                 },
                 {
                     name: '子项目',
                     localPath: '/home/user/project/subproject',
                     enabled: true,
-                    server: { host: '192.168.1.200', port: 22, username: 'test', password: '', privateKeyPath: '', remoteDirectory: '/tmp/subproject' },
+                    server: createMockServerConfig({ host: '192.168.1.200', remoteDirectory: '/tmp/subproject' }),
                     commands: []
                 }
             ];
@@ -451,97 +362,64 @@ describe('Multi-Project Configuration - 多工程配置测试', () => {
 
     describe('Command Selection - 命令选择', () => {
         it('验证单命令配置 - 直接返回该命令', () => {
-            const project: ProjectConfig = {
+            const project = createMockProjectConfig({
                 name: '项目A',
                 localPath: 'D:\\projectA',
-                enabled: true,
-                server: { host: '192.168.1.100', port: 22, username: 'root', password: '', privateKeyPath: '', remoteDirectory: '/tmp/projectA' },
                 commands: [
-                    {
-                        name: '运行测试',
-                        executeCommand: 'pytest {filePath} -v',
-                        filterPatterns: ['ERROR'],
-                        filterMode: 'include'
-                    }
+                    { name: '运行测试', executeCommand: 'pytest {filePath} -v', includePatterns: ['ERROR'], excludePatterns: [] }
                 ]
-            };
+            });
             
-            assert.strictEqual(project.commands.length, 1);
-            assert.strictEqual(project.commands[0].name, '运行测试');
+            assert.strictEqual(project.commands?.length, 1);
+            assert.strictEqual(project.commands![0].name, '运行测试');
         });
 
         it('验证多命令配置 - 需要用户选择', () => {
-            const project: ProjectConfig = {
+            const project = createMockProjectConfig({
                 name: '项目B',
                 localPath: 'D:\\projectB',
-                enabled: true,
-                server: { host: '192.168.1.200', port: 22, username: 'test', password: '', privateKeyPath: '', remoteDirectory: '/tmp/projectB' },
                 commands: [
-                    {
-                        name: '运行测试',
-                        executeCommand: 'pytest {filePath} -v',
-                        filterPatterns: ['ERROR'],
-                        filterMode: 'include'
-                    },
-                    {
-                        name: '运行覆盖率',
-                        executeCommand: 'pytest {filePath} --cov',
-                        filterPatterns: ['ERROR'],
-                        filterMode: 'include'
-                    },
-                    {
-                        name: '运行性能测试',
-                        executeCommand: 'pytest {filePath} --benchmark',
-                        filterPatterns: ['ERROR'],
-                        filterMode: 'include'
-                    }
+                    { name: '运行测试', executeCommand: 'pytest {filePath} -v', includePatterns: ['ERROR'], excludePatterns: [] },
+                    { name: '运行覆盖率', executeCommand: 'pytest {filePath} --cov', includePatterns: ['ERROR'], excludePatterns: [] },
+                    { name: '运行性能测试', executeCommand: 'pytest {filePath} --benchmark', includePatterns: ['ERROR'], excludePatterns: [] }
                 ]
-            };
+            });
             
-            assert.strictEqual(project.commands.length, 3);
+            assert.strictEqual(project.commands?.length, 3);
         });
     });
 
     describe('ServerConfig per Project - 每个工程独立服务器配置', () => {
         it('验证不同工程使用不同服务器', () => {
-            const config: RemoteTestConfig = {
+            const config = createMockRemoteTestConfig({
                 projects: [
-                    {
+                    createMockProjectConfig({
                         name: '开发环境',
                         localPath: 'D:\\dev',
-                        enabled: true,
-                        server: {
+                        server: createMockServerConfig({
                             host: '192.168.1.100',
-                            port: 22,
                             username: 'dev',
                             password: 'devpass',
-                            privateKeyPath: '',
                             remoteDirectory: '/opt/dev'
-                        },
+                        }),
                         commands: []
-                    },
-                    {
+                    }),
+                    createMockProjectConfig({
                         name: '测试环境',
                         localPath: 'D:\\test',
-                        enabled: true,
-                        server: {
+                        server: createMockServerConfig({
                             host: '192.168.1.200',
                             port: 2222,
                             username: 'test',
                             password: '',
                             privateKeyPath: '/home/test/.ssh/id_rsa',
                             remoteDirectory: '/opt/test'
-                        },
+                        }),
                         commands: []
-                    }
+                    })
                 ],
-                ai: {
-                    provider: 'qwen',
-                    qwen: { apiKey: '', apiUrl: '', model: 'qwen-turbo' },
-                    openai: { apiKey: '', apiUrl: '', model: 'gpt-3.5-turbo' }
-                },
                 refreshInterval: 5000
-            };
+            });
             
             assert.strictEqual(config.projects[0].server.host, '192.168.1.100');
             assert.strictEqual(config.projects[1].server.host, '192.168.1.200');
@@ -555,12 +433,12 @@ describe('Multi-Project Configuration - 多工程配置测试', () => {
 
     describe('Case-Insensitive Path Matching - 大小写不敏感路径匹配', () => {
         it('验证Windows盘符大小写不敏感匹配 - 小写d匹配大写D', () => {
-            const projects: ProjectConfig[] = [
+            const projects: ProjectConfigWithFilter[] = [
                 {
                     name: '项目A',
                     localPath: 'D:\\projectA',
                     enabled: true,
-                    server: { host: '192.168.1.100', port: 22, username: 'root', password: '', privateKeyPath: '', remoteDirectory: '/tmp/projectA' },
+                    server: createMockServerConfig({ remoteDirectory: '/tmp/projectA' }),
                     commands: [{ name: '测试', executeCommand: 'pytest', filterPatterns: [], filterMode: 'include' }]
                 }
             ];
@@ -573,12 +451,12 @@ describe('Multi-Project Configuration - 多工程配置测试', () => {
         });
 
         it('验证Windows盘符大小写不敏感匹配 - 大写D匹配小写d', () => {
-            const projects: ProjectConfig[] = [
+            const projects: ProjectConfigWithFilter[] = [
                 {
                     name: '项目B',
                     localPath: 'd:\\projectB',
                     enabled: true,
-                    server: { host: '192.168.1.200', port: 22, username: 'test', password: '', privateKeyPath: '', remoteDirectory: '/tmp/projectB' },
+                    server: createMockServerConfig({ host: '192.168.1.200', remoteDirectory: '/tmp/projectB' }),
                     commands: [{ name: '测试', executeCommand: 'python', filterPatterns: [], filterMode: 'include' }]
                 }
             ];
@@ -591,12 +469,12 @@ describe('Multi-Project Configuration - 多工程配置测试', () => {
         });
 
         it('验证路径包含空格时的大小写匹配', () => {
-            const projects: ProjectConfig[] = [
+            const projects: ProjectConfigWithFilter[] = [
                 {
                     name: '测试项目',
                     localPath: 'D:\\code\\python\\AAAAAA',
                     enabled: true,
-                    server: { host: '192.168.1.100', port: 22, username: 'root', password: '', privateKeyPath: '', remoteDirectory: '/tmp/test' },
+                    server: createMockServerConfig({ remoteDirectory: '/tmp/test' }),
                     commands: [{ name: '测试', executeCommand: 'pytest', filterPatterns: [], filterMode: 'include' }]
                 }
             ];

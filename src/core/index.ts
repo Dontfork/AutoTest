@@ -5,3 +5,4 @@ export { SSHClient, executeRemoteCommand, filterCommandOutput } from './sshClien
 export { SCPClient } from './scpClient';
 export { ConnectionPool } from './connectionPool';
 export { GitChangeDetector } from './gitChangeDetector';
+export { CommandRegistry } from './commandRegistry';

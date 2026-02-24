@@ -1,5 +1,5 @@
 import { getConfig } from '../config';
-import { AIMessage, AIResponse, ChatSession, AIModelConfig } from '../types';
+import { AIMessage, AIResponse, ChatSession, AIModelConfig, AgentMode } from '../types';
 import { createProvider, AIProvider } from './providers';
 import { SessionManager } from './sessionManager';
 
@@ -66,12 +66,16 @@ export class AIChat {
         return this.sessionManager.getAllSessions();
     }
 
-    createNewSession(): ChatSession {
-        return this.sessionManager.createSession();
+    createNewSession(mode: AgentMode = 'ask'): ChatSession {
+        return this.sessionManager.createSession(mode);
     }
 
     deleteSession(sessionId: string): boolean {
         return this.sessionManager.deleteSession(sessionId);
+    }
+
+    updateSessionMode(sessionId: string, mode: AgentMode): ChatSession | null {
+        return this.sessionManager.updateSessionMode(sessionId, mode);
     }
 
     clearCurrentSession(): ChatSession | null {
