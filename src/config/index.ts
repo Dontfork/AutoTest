@@ -7,19 +7,13 @@ import {
     CommandConfig,
     LegacyRemoteTestConfig,
     LegacyLogsConfig,
-    AIConfig,
     ProjectLogsConfig
 } from '../types';
 import { validateConfig, fillMissingFields } from './validator';
 import { showValidationMessages, saveConfigWithDefaults } from './validatorUI';
 
-const defaultAIConfig: AIConfig = {
-    models: []
-};
-
 const defaultConfig: RemoteTestConfig = {
     projects: [],
-    ai: defaultAIConfig,
     refreshInterval: 0
 };
 
@@ -152,8 +146,7 @@ function convertLegacyConfig(legacy: LegacyRemoteTestConfig, workspacePath: stri
     }
     
     return {
-        projects,
-        ai: legacy.ai || defaultAIConfig
+        projects
     };
 }
 
@@ -196,6 +189,9 @@ export function loadConfig(workspacePath: string): RemoteTestConfig {
         }
     }
 
+    console.log('[RemoteTest] Config paths checked:', pathsToTry);
+    console.log('[RemoteTest] Config file found at:', fullPath);
+
     if (!fullPath) {
         fullPath = pathsToTry[0];
     }
@@ -216,6 +212,7 @@ export function loadConfig(workspacePath: string): RemoteTestConfig {
         
         const content = fs.readFileSync(fullPath, 'utf-8');
         const loadedConfig = JSON.parse(content);
+        console.log('[RemoteTest] Loaded config projects:', loadedConfig.projects?.length);
         
         if (loadedConfig.projects && Array.isArray(loadedConfig.projects)) {
             for (const project of loadedConfig.projects) {
@@ -267,7 +264,6 @@ export function loadConfig(workspacePath: string): RemoteTestConfig {
             
             config = {
                 projects: finalConfig.projects,
-                ai: deepMerge(defaultAIConfig, finalConfig.ai || {}),
                 refreshInterval: finalConfig.refreshInterval ?? 0,
                 textFileExtensions: finalConfig.textFileExtensions,
                 clearOutputBeforeRun: finalConfig.clearOutputBeforeRun ?? true,

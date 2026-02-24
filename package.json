@@ -1,8 +1,9 @@
 {
-  "name": "RemoteTest",
-  "displayName": "RemoteTest",
-  "description": "VSCode插件，实现文件上传、命令执行、日志监控和AI对话功能",
+  "name": "remote-test",
+  "displayName": "remote-test",
+  "description": "实现文件上传、命令执行和日志监控功能",
   "version": "1.0.0",
+  "publisher": "RemoteTest",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -17,32 +18,25 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "RemoteTest-ai-chat",
-          "title": "RemoteTest AI",
+          "id": "remote-test-view",
+          "title": "remote-test",
           "icon": "resources/icon.svg"
         }
       ]
     },
     "views": {
-      "RemoteTest-ai-chat": [
+      "remote-test-view": [
         {
-          "id": "RemoteTest-ai-view",
-          "name": "AI 对话",
-          "type": "webview"
-        }
-      ],
-      "explorer": [
-        {
-          "id": "RemoteTestQuickCommands",
-          "name": "快捷命令"
+          "id": "RemoteTestLogs",
+          "name": "日志监控"
         },
         {
           "id": "RemoteTestChanges",
           "name": "修改监控"
         },
         {
-          "id": "RemoteTestLogs",
-          "name": "日志监控"
+          "id": "RemoteTestQuickCommands",
+          "name": "快捷命令"
         }
       ]
     },
@@ -125,6 +119,16 @@
           "group": "navigation@1"
         },
         {
+          "command": "RemoteTest.reloadConfig",
+          "when": "view == RemoteTestQuickCommands",
+          "group": "navigation@2"
+        },
+        {
+          "command": "RemoteTest.openConfig",
+          "when": "view == RemoteTestQuickCommands",
+          "group": "navigation@3"
+        },
+        {
           "command": "RemoteTest.refreshLogs",
           "when": "view == RemoteTestLogs",
           "group": "navigation@1"
@@ -143,6 +147,16 @@
           "command": "RemoteTest.refreshChanges",
           "when": "view == RemoteTestChanges",
           "group": "navigation@1"
+        },
+        {
+          "command": "RemoteTest.reloadConfig",
+          "when": "view == RemoteTestChanges",
+          "group": "navigation@2"
+        },
+        {
+          "command": "RemoteTest.openConfig",
+          "when": "view == RemoteTestChanges",
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
@@ -238,5 +252,17 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/Dontfork/RemoteTest.git"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/Dontfork/RemoteTest/issues"
+  },
+  "keywords": [
+    "remote",
+    "ssh",
+    "ftp",
+    "upload",
+    "test",
+    "log",
+    "monitor"
+  ]
 }

@@ -26,21 +26,6 @@ export interface CommandVariables {
     remoteDir: string;
 }
 
-export type AIProviderType = 'qwen' | 'openai';
-
-export interface AIModelConfig {
-    name: string;
-    provider?: AIProviderType;
-    apiKey?: string;
-    apiUrl?: string;
-}
-
-export interface AIConfig {
-    models: AIModelConfig[];
-    defaultModel?: string;
-    proxy?: string;
-}
-
 export interface LogDirectoryConfig {
     name: string;
     path: string;
@@ -62,7 +47,6 @@ export interface ProjectConfig {
 
 export interface RemoteTestConfig {
     projects: ProjectConfig[];
-    ai: AIConfig;
     refreshInterval?: number;
     textFileExtensions?: string[];
     clearOutputBeforeRun?: boolean;
@@ -96,27 +80,8 @@ export interface LegacyLogsConfig {
 export interface LegacyRemoteTestConfig {
     server?: LegacyServerConfig;
     command?: LegacyCommandConfig;
-    ai?: AIConfig;
     logs?: LegacyLogsConfig;
     projects?: ProjectConfig[];
-}
-
-export interface AIMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-}
-
-export interface AIResponse {
-    content: string;
-    error?: string;
-}
-
-export interface ChatSession {
-    id: string;
-    title: string;
-    messages: AIMessage[];
-    createdAt: number;
-    updatedAt: number;
 }
 
 export interface LogFile {

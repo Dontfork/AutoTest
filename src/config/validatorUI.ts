@@ -4,29 +4,24 @@ import { ConfigValidationResult } from './validator';
 import { getOutputChannelManager } from '../utils/outputChannel';
 
 export function showValidationMessages(result: ConfigValidationResult): void {
+    const outputChannel = getOutputChannelManager().getRemoteTestChannel();
+    
     if (result.errors.length > 0) {
-        const errorMessage = `RemoteTest 配置验证失败：\n${result.errors.join('\n')}`;
-        vscode.window.showErrorMessage(errorMessage, '查看详情').then(selection => {
+        outputChannel.error('配置验证失败');
+        outputChannel.error('─'.repeat(30));
+        result.errors.forEach((err, i) => outputChannel.error(`  ${i + 1}. ${err}`));
+        vscode.window.showErrorMessage(`RemoteTest 配置验证失败：${result.errors.length} 个错误`, '查看详情').then(selection => {
             if (selection === '查看详情') {
-                const outputChannel = getOutputChannelManager().getRemoteTestChannel();
-                outputChannel.info('');
-                outputChannel.info('配置验证结果');
-                outputChannel.info('─'.repeat(50));
-                outputChannel.error('错误:');
-                result.errors.forEach((err, i) => outputChannel.error(`  ${i + 1}. ${err}`));
-                if (result.warnings.length > 0) {
-                    outputChannel.warn('警告:');
-                    result.warnings.forEach((warn, i) => outputChannel.warn(`  ${i + 1}. ${warn}`));
-                }
                 outputChannel.show();
             }
         });
+        return;
     }
 
-    if (result.warnings.length > 0 && result.errors.length === 0) {
-        result.warnings.forEach(warning => {
-            vscode.window.showWarningMessage(warning);
-        });
+    if (result.warnings.length > 0) {
+        outputChannel.warn('配置验证警告');
+        outputChannel.warn('─'.repeat(30));
+        result.warnings.forEach((warn, i) => outputChannel.warn(`  ${i + 1}. ${warn}`));
     }
 }
 
@@ -39,5 +34,4 @@ export function saveConfigWithDefaults(configPath: string, config: any, filledCo
     }
     
     fs.writeFileSync(configPath, content, 'utf-8');
-    vscode.window.showInformationMessage('RemoteTest 配置文件已更新，补充了缺失的必填字段');
 }

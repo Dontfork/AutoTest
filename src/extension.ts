@@ -2,13 +2,10 @@ import * as vscode from 'vscode';
 import { loadConfig, reloadConfig, setupConfigWatcher, onConfigChanged, dispose as disposeConfig } from './config';
 import { CommandExecutor, FileUploader } from './core';
 import { ConnectionPool } from './core/connectionPool';
-import { AIChat, SessionManager } from './ai';
-import { LogTreeView, LogTreeItem, AIChatViewProvider, ChangesTreeView, ChangeTreeItem, QuickCommandsTreeView, QuickCommandItem } from './views';
+import { LogTreeView, LogTreeItem, ChangesTreeView, ChangeTreeItem, QuickCommandsTreeView, QuickCommandItem } from './views';
 
 let commandExecutor: CommandExecutor;
 let fileUploader: FileUploader;
-let aiChat: AIChat;
-let sessionManager: SessionManager;
 let logTreeView: LogTreeView;
 let changesTreeView: ChangesTreeView;
 let quickCommandsTreeView: QuickCommandsTreeView;
@@ -23,8 +20,6 @@ export function activate(context: vscode.ExtensionContext) {
     commandExecutor = new CommandExecutor();
     
     fileUploader = new FileUploader(commandExecutor);
-    sessionManager = new SessionManager(context);
-    aiChat = new AIChat(sessionManager);
     logTreeView = new LogTreeView();
     changesTreeView = new ChangesTreeView(fileUploader);
     quickCommandsTreeView = new QuickCommandsTreeView();
@@ -172,12 +167,7 @@ export function activate(context: vscode.ExtensionContext) {
         })
     ];
 
-    const aiChatView = vscode.window.registerWebviewViewProvider(
-        AIChatViewProvider.viewType, 
-        new AIChatViewProvider(context.extensionUri, aiChat, sessionManager)
-    );
-
-    context.subscriptions.push(...commands, aiChatView);
+    context.subscriptions.push(...commands);
 
     logTreeView.start();
 
@@ -190,9 +180,6 @@ export function deactivate() {
     }
     if (commandExecutor) {
         commandExecutor.dispose();
-    }
-    if (sessionManager) {
-        sessionManager.dispose();
     }
     ConnectionPool.getInstance().destroy();
     disposeConfig();

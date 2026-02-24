@@ -1,45 +1,36 @@
-# RemoteTest
+# remote-test
 
-一款 VSCode 插件，简化测试工作流程，提供文件上传、命令执行、日志监控和 AI 对话功能。
+简化测试工作流程，提供文件上传、命令执行和日志监控功能。
 
 ## 功能特性
 
-- **多工程多环境**: 独立的服务器、命令和日志配置
 - **文件上传/同步**: 右键菜单操作，支持单文件和目录
 - **快捷命令**: 快速执行预定义命令
 - **修改监控**: 基于 Git 检测变更，一键上传
 - **日志监控**: 实时查看和下载远程日志
-- **AI 对话**: 多模型支持，流式输出，Markdown 渲染
-
-## 快速开始
-
-### 安装
-
-```bash
-npm install
-npm run webpack-dev
-```
-
-### 调试
-
-按 F5 启动调试，在新窗口中测试插件。
-
-### 打包
-
-```bash
-npm run package
-vsce package
-```
 
 ## 配置
 
-在项目根目录创建 `.vscode/RemoteTest-config.json`：
+### 创建配置文件
+
+在项目根目录的 `.vscode` 文件夹下创建 `RemoteTest-config.json` 文件：
+
+```
+你的项目文件夹/
+├── .vscode/
+│   ├── RemoteTest-config.json  ← 创建这个文件
+│   └── launch.json
+├── src/
+└── ...
+```
+
+### 配置示例
 
 ```json
 {
   "projects": [
     {
-      "name": "我的项目",
+      "name": "我的测试项目",
       "localPath": "D:\\myproject",
       "server": {
         "host": "192.168.1.100",
@@ -49,56 +40,205 @@ vsce package
       },
       "remoteDirectory": "/home/user/myproject",
       "commands": [
-        { "name": "运行测试", "executeCommand": "pytest {filePath} -v" }
+        {
+          "name": "运行测试",
+          "executeCommand": "pytest {filePath} -v"
+        },
+        {
+          "name": "清理缓存",
+          "executeCommand": "rm -rf __pycache__"
+        }
       ],
       "logs": {
         "directories": [
-          { "name": "应用日志", "path": "/var/log/myapp" }
+          {
+            "name": "应用日志",
+            "path": "/var/log/myapp"
+          }
         ],
-        "downloadPath": "D:\\downloads"
+        "downloadPath": "D:\\downloads\\logs"
       }
     }
-  ],
-  "ai": {
-    "models": [
-      { "name": "qwen-turbo", "provider": "qwen", "apiKey": "your-api-key" }
-    ],
-    "defaultModel": "qwen-turbo"
-  }
+  ]
 }
 ```
 
+### 配置项说明
+
+| 配置项 | 说明 | 示例 |
+|--------|------|------|
+| **项目配置** | | |
+| `name` | 项目名称 | "我的测试项目" |
+| `enabled` | 是否启用（默认true） | true |
+| `localPath` | 本地项目路径 | "D:\\myproject" |
+| **服务器配置** | | |
+| `server.host` | 服务器地址 | "192.168.1.100" |
+| `server.port` | SSH端口（默认22） | 22 |
+| `server.username` | 用户名 | "root" |
+| `server.password` | 密码 | "your-password" |
+| `server.privateKeyPath` | SSH私钥路径 | "C:\\Users\\user\\.ssh\\id_rsa" |
+| `server.remoteDirectory` | 远程工作目录 | "/home/user/myproject" |
+| **命令配置** | | |
+| `commands` | 快捷命令列表 | 见下文 |
+| **日志配置** | | |
+| `logs.directories` | 日志目录列表 | 见下文 |
+| `logs.downloadPath` | 日志下载保存路径 | "D:\\downloads\\logs" |
+| **全局配置** | | |
+| `refreshInterval` | 日志刷新间隔（毫秒），0为禁用 | 5000 |
+| `useLogOutputChannel` | 测试输出通道类型 | true |
+| `textFileExtensions` | 额外文本文件扩展名（上传时作为文本处理） | [".txt", ".json"] |
+
+> **提示**：
+> - `useLogOutputChannel`: true=LogOutputChannel（支持日志级别），false=OutputChannel
+> - `textFileExtensions`: 指定上传时作为文本处理的文件扩展名（转换换行符）
+
+### 快捷命令配置
+
+```json
+"commands": [
+  {
+    "name": "显示名称",
+    "executeCommand": "实际执行的命令",
+    "runnable": true,
+    "clearOutputBeforeRun": true,
+    "includePatterns": ["ERROR", "FAILED"],
+    "excludePatterns": ["DEBUG"]
+  }
+]
+```
+
+| 命令配置项 | 说明 | 示例 |
+|------------|------|------|
+| `name` | 命令名称 | "运行测试" |
+| `executeCommand` | 执行命令 | "pytest {filePath} -v" |
+| `runnable` | 是否可运行（在右键菜单显示） | true |
+| `clearOutputBeforeRun` | 执行前清空输出（默认true） | true |
+| `includePatterns` | 只显示匹配的行 | ["ERROR", "FAILED"] |
+| `excludePatterns` | 排除匹配的行 | ["DEBUG", "TRACE"] |
+
+**命令变量**：
+- `{filePath}` - 当前文件路径
+- `{fileName}` - 文件名
+- `{fileDir}` - 文件所在目录
+- `{localPath}` - 本地完整路径
+- `{remoteDir}` - 远程目录
+
+### 日志目录配置
+
+```json
+"logs": {
+  "directories": [
+    {
+      "name": "显示名称",
+      "path": "远程日志目录路径"
+    }
+  ],
+  "downloadPath": "本地保存路径"
+}
+```
+
+| 日志配置项 | 说明 | 示例 |
+|-------------|------|------|
+| `name` | 目录显示名称 | "应用日志" |
+| `path` | 远程日志目录 | "/var/log/myapp" |
+| `downloadPath` | 本地下载路径 | "D:\\downloads\\logs" |
+
 ## 使用
 
-| 操作 | 入口 |
-|------|------|
-| 运行用例 | 右键文件 → RemoteTest: 运行 |
-| 上传文件 | 右键文件 → RemoteTest: 上传文件 |
-| 同步文件 | 右键文件 → RemoteTest: 同步文件 |
-| 快捷命令 | 资源管理器 → 快捷命令面板 |
-| 修改监控 | 资源管理器 → 修改监控面板 |
-| 日志监控 | 资源管理器 → 日志监控面板 |
-| AI 对话 | 活动栏 → RemoteTest AI 图标 |
+### 打开插件视图
 
-## 文档
+在 VSCode 左侧活动栏找到 **remote-test** 图标，点击展开：
 
-- [用户指南](./doc/user_guide.md) - 配置和使用说明
-- [设计文档](./doc/design.md) - 系统架构和详细配置
+- 📋 日志监控 - 查看和下载远程日志
+- 📝 修改监控 - 查看 Git 变更并上传
+- ⌨️ 快捷命令 - 快速执行预设命令
 
-## 目录结构
+### 文件操作
 
-```
-src/
-├── ai/           # AI 对话模块
-├── config/       # 配置管理
-├── core/         # 核心功能（SSH/SCP/命令执行）
-├── types/        # 类型定义
-├── utils/        # 工具函数
-└── views/        # UI 视图
-```
+在资源管理器中右键点击文件或文件夹：
 
-## 测试
+| 操作 | 菜单位置 |
+|------|----------|
+| 上传文件 | 右键 → RemoteTest: 上传文件 |
+| 下载文件 | 右键 → RemoteTest: 同步文件 |
+| 运行测试 | 右键 → RemoteTest: 运行 |
+
+### 日志监控
+
+1. 点击活动栏的 **remote-test** 图标
+2. 选择 **日志监控**
+3. 点击目录查看日志文件
+4. 右键日志文件可下载或打开
+
+### 修改监控
+
+1. 点击活动栏的 **remote-test** 图标
+2. 选择 **修改监控**
+3. 查看所有有变更的文件
+4. 右键单个文件或整个项目进行上传
+
+### 快捷命令
+
+1. 点击活动栏的 **remote-test** 图标
+2. 选择 **快捷命令**
+3. 点击命令名称执行
+
+### 配置操作
+
+在任意视图的标题栏可以：
+
+- 🔄 刷新配置 - 重新加载配置文件
+- ⚙️ 打开配置 - 在编辑器中打开配置文件
+
+## 常见问题
+
+### Q: 配置文件放在哪里？
+
+A: 配置文件应放在**当前打开的 VSCode 项目根目录**的 `.vscode` 文件夹下，文件名必须是 `RemoteTest-config.json`。
+
+### Q: 连接不上服务器？
+
+A: 检查配置：
+1. 服务器地址是否正确
+2. 端口是否是 22
+3. 用户名和密码是否正确
+
+### Q: 日志目录看不到文件？
+
+A: 检查：
+1. 远程目录路径是否正确
+2. 是否有读取权限
+
+### Q: 上传文件失败？
+
+A: 检查：
+1. `localPath` 是否配置正确
+2. `remoteDirectory` 是否存在
+3. 远程目录是否有写入权限
+
+## 技术支持
+
+如有问题，请检查：
+1. 配置文件格式是否正确（JSON 语法）
+2. 所有路径是否存在
+3. 网络连接是否正常
+
+## 开发调试
+
+### 安装依赖
 
 ```bash
-npm test
+npm install
 ```
+
+### 启动调试
+
+按 **F5** 启动调试，会在新窗口中加载插件
+
+### 打包插件
+
+```bash
+npm run package
+```
+
+打包完成后，会生成 `.vsix` 文件，可以在 VSCode 中通过"从 VSIX 安装"来安装插件。

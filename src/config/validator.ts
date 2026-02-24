@@ -1,4 +1,4 @@
-import { RemoteTestConfig, ProjectConfig, ServerConfig, AIConfig } from '../types';
+import { RemoteTestConfig, ProjectConfig, ServerConfig } from '../types';
 
 export interface ConfigValidationResult {
     isValid: boolean;
@@ -16,7 +16,7 @@ export interface MissingField {
     defaultValue: any;
 }
 
-const VALID_ROOT_KEYS = ['projects', 'ai', 'refreshInterval', 'textFileExtensions', 'clearOutputBeforeRun', 'useLogOutputChannel'];
+const VALID_ROOT_KEYS = ['projects', 'refreshInterval', 'textFileExtensions', 'clearOutputBeforeRun', 'useLogOutputChannel'];
 
 const VALID_PROJECT_KEYS = ['name', 'localPath', 'enabled', 'server', 'commands', 'logs'];
 
@@ -28,10 +28,6 @@ const VALID_LOGS_KEYS = ['directories', 'downloadPath'];
 
 const VALID_LOG_DIRECTORY_KEYS = ['name', 'path'];
 
-const VALID_AI_KEYS = ['models', 'defaultModel', 'proxy'];
-
-const VALID_MODEL_KEYS = ['name', 'provider', 'apiKey', 'apiUrl'];
-
 const REQUIRED_PROJECT_FIELDS = [
     { path: 'name', field: 'name', defaultValue: '未命名工程' },
 ];
@@ -41,10 +37,6 @@ const REQUIRED_SERVER_FIELDS = [
     { path: 'server.port', field: 'port', defaultValue: 22 },
     { path: 'server.username', field: 'username', defaultValue: '' },
 ];
-
-const DEFAULT_AI_CONFIG: AIConfig = {
-    models: []
-};
 
 function isValidPath(path: string): boolean {
     if (!path || typeof path !== 'string') {
@@ -304,53 +296,6 @@ export function validateConfig(config: any): ConfigValidationResult {
         }
     }
 
-    if (!config.ai || typeof config.ai !== 'object') {
-        warnings.push('配置文件缺少 "ai" 配置，将使用默认 AI 配置');
-    } else {
-        unknownKeys.push(...checkUnknownKeys(config.ai, VALID_AI_KEYS, 'ai'));
-
-        if (!config.ai.models || !Array.isArray(config.ai.models)) {
-            warnings.push('AI 配置缺少 "models" 数组，AI 对话功能将无法使用');
-        } else {
-            if (config.ai.models.length === 0) {
-                warnings.push('AI 配置的 "models" 数组为空，AI 对话功能将无法使用');
-            }
-
-            for (let i = 0; i < config.ai.models.length; i++) {
-                const model = config.ai.models[i];
-                const modelPrefix = `ai.models[${i}]`;
-
-                unknownKeys.push(...checkUnknownKeys(model, VALID_MODEL_KEYS, modelPrefix));
-
-                if (!model.name || typeof model.name !== 'string') {
-                    warnings.push(`AI 模型 ${i + 1} 缺少 "name" 字段`);
-                }
-
-                if (model.provider && !['qwen', 'openai'].includes(model.provider)) {
-                    warnings.push(`AI 模型 "${model.name || i + 1}" 的 provider "${model.provider}" 无效，应为 qwen 或 openai`);
-                }
-
-                if (model.apiUrl && !isValidUrl(model.apiUrl)) {
-                    warnings.push(`AI 模型 "${model.name || i + 1}" 的 apiUrl "${model.apiUrl}" 不是有效的 URL`);
-                }
-            }
-
-            if (config.ai.proxy && typeof config.ai.proxy === 'string') {
-                const proxyParts = config.ai.proxy.split(':');
-                if (proxyParts.length !== 2 || isNaN(parseInt(proxyParts[1], 10))) {
-                    warnings.push(`AI proxy "${config.ai.proxy}" 格式不正确，应为 "host:port"`);
-                }
-            }
-
-            if (config.ai.defaultModel) {
-                const modelNames = config.ai.models.map((m: any) => m.name);
-                if (!modelNames.includes(config.ai.defaultModel)) {
-                    warnings.push(`AI 配置的 defaultModel "${config.ai.defaultModel}" 在 models 中不存在`);
-                }
-            }
-        }
-    }
-
     if (config.refreshInterval === undefined) {
         warnings.push('未配置 refreshInterval，将使用默认值 0（禁用自动刷新）');
     }
@@ -416,15 +361,6 @@ export function fillMissingFields(config: any, missingFields: MissingField[]): a
                 current[lastPart] = missing.defaultValue;
             }
         }
-    }
-
-    if (!result.ai) {
-        result.ai = DEFAULT_AI_CONFIG;
-    } else {
-        result.ai = {
-            models: result.ai.models || [],
-            defaultModel: result.ai.defaultModel
-        };
     }
 
     if (result.refreshInterval === undefined) {
