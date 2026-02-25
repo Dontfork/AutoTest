@@ -3,7 +3,8 @@
   "displayName": "remote-test",
   "description": "实现文件上传、命令执行和日志监控功能",
   "version": "1.0.0",
-  "publisher": "RemoteTest",
+  "publisher": "YiEvan",
+  "icon": "resources/logo.png",
   "engines": {
     "vscode": "^1.85.0"
   },
